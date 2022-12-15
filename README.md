@@ -12,7 +12,7 @@ You need
   `git ls_file`
 - a pager tool, e.g. `delta`
 
-https://user-images.githubusercontent.com/1681295/144705615-658ab025-f2a3-4857-b9d3-e5e2142bf316.mp4
+https://user-images.githubusercontent.com/1681295/207864539-ec65b9c4-d8a0-4509-b13f-bd2192f742d9.mp4
 
 # install
 
