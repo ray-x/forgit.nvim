@@ -1,11 +1,11 @@
-local utils = require('sad.utils')
+local utils = require('forgit.utils')
 local api = vim.api
 local guihua_term = utils.load_plugin('guihua.lua', 'guihua.floating')
 if not guihua_term then
   utils.warn('guihua not installed, please install ray-x/guihua.lua for GUI functions')
 end
 
-local term_name = 'sad_floaterm'
+local term_name = 'forgit_floaterm'
 
 local function close_float_terminal()
   local has_var, float_term_win = pcall(api.nvim_buf_get_var, 0, term_name)

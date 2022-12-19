@@ -9,9 +9,9 @@ _FORGIT_CFG = {
   git_alias = false,
   diff = 'delta', -- diff-so-fancy
   exact = false, -- Exact match
-  vsplit = true, -- split sad window the screen vertically
-  height_ratio = 0.6, -- height ratio of sad window when split horizontally
-  width_ratio = 0.6, -- height ratio of sad window when split vertically
+  vsplit = true, -- split forgit window the screen vertically
+  height_ratio = 0.6, -- height ratio of forgit window when split horizontally
+  width_ratio = 0.6, -- height ratio of forgit window when split vertically
 }
 
 local create_cmd = function(cmd, func, opt)
