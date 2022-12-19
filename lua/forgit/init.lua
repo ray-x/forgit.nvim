@@ -1,10 +1,12 @@
 local M = {}
 
-local utils = require('sad.utils')
+local utils = require('forgit.utils')
 local log = utils.log
 local lprint = lprint or log
 _FORGIT_CFG = {
   ls_file = 'fd', -- git ls-file
+  fugitive = false,
+  git_alias = false,
   diff = 'delta', -- diff-so-fancy
   exact = false, -- Exact match
   vsplit = true, -- split sad window the screen vertically
@@ -67,6 +69,9 @@ M.setup = function(cfg)
       local term = require('forgit.term').run
       term({ cmd = cmd, autoclose = true })
     end)
+  end
+  if _FORGIT_CFG.git_alias then
+    require('forgit.commands')
   end
 end
 
