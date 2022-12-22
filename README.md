@@ -32,7 +32,8 @@ require'forgit'.setup({
   -- it is a threadhold when window is larger than the threshold forgit will split vertically,
   height_ratio = 0.6, -- height ratio of forgit window when split horizontally
   width_ratio = 0.6, -- height ratio of forgit window when split vertically
-
+  git_alias = true,  -- git commands alias (see readme)
+  fugitive = false, -- -- git fugitive installed
 })
 ```
 
@@ -68,7 +69,7 @@ require'forgit'.setup({
 |Gbl     | Interactive `git blame` selector |
 |Gfu     | Interactive `git commit --fixup && git rebase -i --autosquash` selector |
 
-### ⌨  Keybinds
+### ⌨  Forgit Keybinds
 
 | Key                                           | Action                    |
 | :-------------------------------------------: | ------------------------- |
@@ -85,6 +86,51 @@ require'forgit'.setup({
 | <kbd>Alt</kbd> - <kbd>K</kbd> / <kbd>P</kbd>  | Preview move up           |
 | <kbd>Alt</kbd> - <kbd>J</kbd> / <kbd>N</kbd>  | Preview move down         |
 
+
+### ⌨  Git command alias
+
+
+| Command               | Action                    |
+| :-------------------: | ------------------------- |
+|Gaa| git add --all|
+|Gap| git  add -pu |
+|Gash| git  stash |
+|Gasha| git  stash apply |
+|Gashl| git  stash list |
+|Gashp| git  stash pop |
+|Gashu| git  stash --include-untracked |
+|Gau| git  add -u |
+|Gc| git  commit |
+|Gce| git  clean |
+|Gcef| git  clean -fd |
+|Gcl| git  clone |
+|Gcm| git  commit -m |
+|Gdf| git  diff -- |
+|Gdnw| git  diff -w -- |
+|Gdw| git  diff --word-diff |
+|Gf| git  fetch |
+|Gfa| git  fetch --all |
+|Gfr| git  fetch; and git rebase |
+|Glg| git  log --graph --max-count=5 |
+|Gm| git  merge |
+|Gmff| git  merge --ff |
+|Gmnff| git  merge --no-ff |
+|Gopen| git  config --get remote.origin.url | xargs open |
+|Gpl| git  pull |
+|Gplr| git  pull --rebase |
+|Gps| git  push |
+|Gpsf| git  push --force-with-lease |
+|Gr| git  remote -v |
+|Grb| git  rebase |
+|Grbi| git  rebase -i |
+|Grs| git  reset -- |
+|Grsh| git  reset --hard |
+|Grsl| git  reset HEAD~ |
+|Gsh| git  show |
+|Gt| git  tag |
+|Gtop| git  rev-parse --show-toplevel |
+|Gurl| git  config --get remote.origin.url |
+
 ### 📦 Optional dependencies
 
 - [`delta`](https://github.com/dandavison/delta) / [`diff-so-fancy`](https://github.com/so-fancy/diff-so-fancy): For better human readable diffs.
@@ -92,3 +138,5 @@ require'forgit'.setup({
 - [`bat`](https://github.com/sharkdp/bat.git): Syntax highlighting for `gitignore`.
 
 - [`emoji-cli`](https://github.com/wfxr/emoji-cli): Emoji support for `git log`.
+
+- git fugitive

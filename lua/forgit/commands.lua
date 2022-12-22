@@ -52,9 +52,11 @@ end
 for name, cmd in pairs(cmds) do
   create_cmd(name, function(opts)
     if opts and opts.fargs and #opts.fargs > 0 then
-      cmd = cmd .. ' ' .. unpack(opts.fargs)
-      print(cmd)
+      for _, arg in ipairs(opts.fargs) do
+        cmd = cmd .. ' ' .. arg
+      end
     end
     vim.cmd(cmd)
+    vim.notify(cmd)
   end, { nargs = '*' })
 end
