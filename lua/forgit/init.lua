@@ -10,6 +10,7 @@ _FORGIT_CFG = {
   diff = 'delta', -- diff-so-fancy
   exact = false, -- Exact match
   vsplit = true, -- split forgit window the screen vertically
+  show_result = 'quickfix', -- show cmd result in quickfix or notify
   height_ratio = 0.6, -- height ratio of forgit window when split horizontally
   width_ratio = 0.6, -- height ratio of forgit window when split vertically
 }
@@ -71,7 +72,7 @@ M.setup = function(cfg)
     end)
   end
   if _FORGIT_CFG.git_alias then
-    require('forgit.commands')
+    require('forgit.commands').setup()
   end
 end
 
