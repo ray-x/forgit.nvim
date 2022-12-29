@@ -6,11 +6,12 @@ end
 local cmds = {
   Gaa = git .. [[ add --all]],
   Gap = git .. ' add -pu',
-  Gs = git .. ' stash',
-  Gsa = git .. ' stash apply',
-  -- Gsl = git .. ' stash list', gss
-  Gspop = git .. ' stash pop',
-  Gsu = git .. ' stash --include-untracked',
+  Gs = git .. ' status',
+  Gash = git .. ' stash',
+  Gasha = git .. ' stash apply',
+  Gashl = git .. ' stash list',
+  Gashp = git .. ' stash pop',
+  Gashu = git .. ' stash --include-untracked',
   Gau = git .. ' add -u',
   Gc = git .. ' commit',
   Gce = git .. ' clean',
