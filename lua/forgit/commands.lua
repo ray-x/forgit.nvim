@@ -6,14 +6,15 @@ end
 local cmds = {
   Gaa = git .. [[ add --all]],
   Gap = git .. ' add -pu',
-  Gash = git .. ' stash',
-  Gasha = git .. ' stash apply',
-  Gashl = git .. ' stash list',
-  Gashp = git .. ' stash pop',
-  Gashu = git .. ' stash --include-untracked',
+  Gs = git .. ' stash',
+  Gsa = git .. ' stash apply',
+  -- Gsl = git .. ' stash list', gss
+  Gspop = git .. ' stash pop',
+  Gsu = git .. ' stash --include-untracked',
   Gau = git .. ' add -u',
   Gc = git .. ' commit',
   Gce = git .. ' clean',
+  GcB = git .. ' checkout -b',
   Gcef = git .. ' clean -fd',
   Gcl = git .. ' clone',
   Gcm = git .. ' commit -m',
@@ -56,6 +57,7 @@ for name, cmd in pairs(cmds) do
         cmd = cmd .. ' ' .. arg
       end
     end
+    -- lprint(cmd)
     vim.cmd(cmd)
     vim.notify(cmd)
   end, { nargs = '*' })

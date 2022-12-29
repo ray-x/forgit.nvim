@@ -94,17 +94,13 @@ require'forgit'.setup({
 | :-------------------: | ------------------------- |
 |Gaa| git add --all|
 |Gap| git  add -pu |
-|Gash| git  stash |
-|Gasha| git  stash apply |
-|Gashl| git  stash list |
-|Gashp| git  stash pop |
-|Gashu| git  stash --include-untracked |
 |Gau| git  add -u |
 |Gc| git  commit |
 |Gce| git  clean |
 |Gcef| git  clean -fd |
 |Gcl| git  clone |
 |Gcm| git  commit -m |
+|GcB| git checkout -b <branch> |
 |Gdf| git  diff -- |
 |Gdnw| git  diff -w -- |
 |Gdw| git  diff --word-diff |
@@ -126,6 +122,10 @@ require'forgit'.setup({
 |Grs| git  reset -- |
 |Grsh| git  reset --hard |
 |Grsl| git  reset HEAD~ |
+|Gs| git  stash |
+|Gsa| git  stash apply |
+|Gspop| git  stash pop |
+|Gsu| git  stash --include-untracked |
 |Gsh| git  show |
 |Gt| git  tag |
 |Gtop| git  rev-parse --show-toplevel |
