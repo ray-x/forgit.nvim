@@ -2,7 +2,6 @@ local M = {}
 
 local utils = require('forgit.utils')
 local log = utils.log
-local lprint = lprint or log
 _FORGIT_CFG = {
   ls_file = 'fd', -- git ls-file
   fugitive = false,
@@ -66,7 +65,6 @@ M.setup = function(cfg)
     -- create_cmd(cmd, 'lua require("forgit").' .. cmd:lower() .. '()')
     create_cmd(cmd, function(_)
       cmd = string.lower(cmd)
-      lprint(cmd)
       local term = require('forgit.term').run
       term({ cmd = cmd, autoclose = true })
     end)

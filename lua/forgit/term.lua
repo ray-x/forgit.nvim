@@ -30,6 +30,6 @@ local term = function(opts)
   return guihua_term.gui_term(opts)
 end
 
---term({ cmd = 'echo abddeefsfsafd', autoclose = false })
---term({ cmd = 'lazygit', autoclose = false })
+-- term({ cmd = 'echo abddeefsfsafd', autoclose = false })
+-- term({ cmd = 'lazygit', autoclose = true })
 return { run = term, close = close_float_terminal }

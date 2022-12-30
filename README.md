@@ -69,6 +69,14 @@ require'forgit'.setup({
 |Gbl     | Interactive `git blame` selector |
 |Gfu     | Interactive `git commit --fixup && git rebase -i --autosquash` selector |
 
+- Other git + fzf commands
+
+| Command               | Action                    |
+| :-------------------: | ------------------------- |
+|Gdl      | Interactive `git diff --name-only & edit select file` generator |
+|Gcbc     | Interactive `git branch --sort=-committerdate && checkout` generator |
+|Gdc     | Interactive `git diff hash` generator |
+
 ### ⌨  Forgit Keybinds
 
 | Key                                           | Action                    |
@@ -108,6 +116,8 @@ require'forgit'.setup({
 |Gdf| git  diff -- |
 |Gdnw| git  diff -w -- |
 |Gdw| git  diff --word-diff |
+|Gdmn| git  diff master/main --name-only \| fzf |
+|Gdn| git  diff --name-only \| fzf |
 |Gf| git  fetch |
 |Gfa| git  fetch --all |
 |Gfr| git  fetch; and git rebase |

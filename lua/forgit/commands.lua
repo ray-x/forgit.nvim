@@ -81,6 +81,132 @@ local function setup()
       vim.notify(cmdstr)
     end, { nargs = '*' })
   end
+
+  -- other commmands
+  -- git diff master/main --name-only
+
+  create_cmd('Gdl', function(opts)
+    local master = vim.fn.system('git rev-parse --abbrev-ref master')
+    if master:find('fatal') then
+      master = 'main'
+    else
+      master = 'master'
+    end
+    local cmd = string.format('git diff %s --name-only', master)
+    if opts and opts.fargs and #opts.fargs > 0 then
+      for _, arg in ipairs(opts.fargs) do
+        cmd = cmd .. ' ' .. arg
+      end
+    end
+    cmd = vim.split(cmd, ' ')
+    print(vim.inspect(cmd))
+    local fzf = require('forgit.fzf').run
+    fzf(cmd, function(line)
+      vim.cmd('edit ' .. line)
+    end)
+  end, { nargs = '*' })
+
+  create_cmd('Gdl', function(opts)
+    local master = vim.fn.system('git rev-parse --abbrev-ref master')
+    if master:find('fatal') then
+      master = 'main'
+    else
+      master = 'master'
+    end
+    local cmd = string.format('git diff %s --name-only', master)
+    if opts and opts.fargs and #opts.fargs > 0 then
+      for _, arg in ipairs(opts.fargs) do
+        cmd = cmd .. ' ' .. arg
+      end
+    end
+    cmd = vim.split(cmd, ' ')
+    local fzf = require('forgit.fzf').run
+    fzf(cmd, function(line)
+      vim.cmd('edit ' .. line)
+    end)
+  end, { nargs = '*' })
+
+  create_cmd('Gbs', function(opts)
+    local cmd = 'git branch --sort=-committerdate'
+    if opts and opts.fargs and #opts.fargs > 0 then
+      for _, arg in ipairs(opts.fargs) do
+        cmd = cmd .. ' ' .. arg
+      end
+    end
+    cmd = vim.split(cmd, ' ')
+    local fzf = require('forgit.fzf').run
+    fzf(cmd, function(line)
+      print(vim.fn.system('git checkout ' .. line))
+    end)
+  end, { nargs = '*' })
+
+  create_cmd('Gcbc', function(opts)
+    local cmd = 'git branch --sort=-committerdate'
+    if opts and opts.fargs and #opts.fargs > 0 then
+      for _, arg in ipairs(opts.fargs) do
+        cmd = cmd .. ' ' .. arg
+      end
+    end
+    cmd = vim.split(cmd, ' ')
+    local fzf = require('forgit.fzf').run
+    fzf(cmd, function(line)
+      print(vim.fn.system('git checkout ' .. line))
+    end)
+  end, { nargs = '*' })
+
+  create_cmd('Gdc', function(opts)
+    local sh = vim.o.shell
+
+    local delta = '|delta'
+    if vim.fn.executable('delta') == 0 then
+      delta = ''
+    end
+    local cmd = [[hash=$(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]'); git diff $hash --name-only|fzf -m --ansi --preview "git diff $hash --color=always -- {-1}]]
+      .. delta
+      .. '"'
+      .. '|xargs git difftool $hash'
+    if sh:find('fish') then
+      cmd = [[set hash $(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]') ; git diff $hash --name-only|fzf -m --ansi --preview "git diff $hash --color=always -- {-1}]]
+        .. delta
+        .. '"'
+        .. '|xargs git difftool $hash'
+    end
+    if opts and opts.fargs and #opts.fargs > 0 then
+      for _, arg in ipairs(opts.fargs) do
+        cmd = cmd .. ' ' .. arg
+      end
+    end
+
+    local term = require('forgit.term').run
+    term({ cmd = cmd, autoclose = true })
+  end, { nargs = '*' })
+
+  create_cmd('Gdct', function(opts)
+    local sh = vim.o.shell
+
+    local delta = '|delta'
+    if vim.fn.executable('delta') == 0 then
+      delta = ''
+    end
+    local cmd = [[hash=$(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]'); git diff $hash --name-only|fzf -m --ansi --preview "git diff $hash --color=always -- {-1}]]
+      .. delta
+      .. '"'
+      .. '| xargs git difftool $hash'
+    if sh:find('fish') then
+      cmd = [[set hash $(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]') ; git diff $hash --name-only|fzf -m --ansi --preview "git diff $hash --color=always -- {-1}]]
+        .. delta
+        .. '"'
+        .. '| xargs git difftool $hash'
+    end
+    if opts and opts.fargs and #opts.fargs > 0 then
+      for _, arg in ipairs(opts.fargs) do
+        cmd = cmd .. ' ' .. arg
+      end
+    end
+
+    local term = require('forgit.term').run
+    term({ cmd = cmd, autoclose = true })
+  end, { nargs = '*' })
 end
 
 return {
