@@ -2,7 +2,7 @@
 
 forgit plugin for neovim. Run git interactively with fzf inside nvim.
 
-This plug is a wrapper for [forgit](https://github.com/wfxr/forgit) by `Wenxuan Zhang` plus 42 git commands alias
+This plug is a wrapper for [forgit](https://github.com/wfxr/forgit) by `Wenxuan Zhang` plus neovim extension && 42 git commands alias, it can be integrated with [diffview.nvim](https://github.com/sindrets/diffview.nvim)
 
 You need
 

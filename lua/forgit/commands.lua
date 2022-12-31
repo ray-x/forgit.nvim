@@ -1,5 +1,6 @@
 --
 
+local term = require('forgit.term').run
 local create_cmd = function(cmd, func, opt)
   opt = vim.tbl_extend('force', { desc = 'git command alias ' .. cmd }, opt or {})
   vim.api.nvim_create_user_command(cmd, func, opt)
@@ -70,9 +71,8 @@ local function setup()
       if _FORGIT_CFG.fugitive then
         vim.cmd(cmdstr)
       else
-        if type(cmd) == 'string' and cmd:find('diff') then
-          local term = require('forgit.term').run
-          term({ cmd = cmd, autoclose = true })
+        if type(cmd) == 'string' and cmd:find('diff') or cmd:find('fzf') or cmd:find('show') then
+          term({ cmd = cmd, autoclose = false })
         else
           local lines = vim.fn.systemlist(vim.split(cmdstr, ' '))
           if _FORGIT_CFG.show_result == 'quickfix' then
@@ -239,7 +239,6 @@ local function setup()
       end
     end
 
-    local term = require('forgit.term').run
     term({ cmd = cmd, autoclose = true })
   end, { nargs = '*' })
 
@@ -292,10 +291,11 @@ review-window "right,72%" --preview "git diff $hash --color=always -- {-1}]] .. 
       end
     end
 
-    local term = require('forgit.term').run
     term({ cmd = cmd, autoclose = true })
   end, { nargs = '*' })
 end
+
+-- term({ cmd = 'git diff --', autoclose = false })
 
 return {
   setup = setup,

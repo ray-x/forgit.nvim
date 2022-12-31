@@ -32,4 +32,7 @@ end
 
 -- term({ cmd = 'echo abddeefsfsafd', autoclose = false })
 -- term({ cmd = 'lazygit', autoclose = true })
+
+-- term({ cmd = 'git diff --', autoclose = false })
+-- term({ cmd = 'git show', autoclose = false })
 return { run = term, close = close_float_terminal }
