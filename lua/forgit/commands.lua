@@ -160,6 +160,17 @@ local function setup()
     end)
   end, { nargs = '*' })
 
+  create_cmd('Gfz', function(opts)
+    local cmd = 'git fuzzy'
+    if opts and opts.fargs and #opts.fargs > 0 then
+      for _, arg in ipairs(opts.fargs) do
+        cmd = cmd .. ' ' .. arg
+      end
+    end
+    cmd = vim.split(cmd, ' ')
+    term({ cmd = cmd, autoclose = true })
+  end, { nargs = '*' })
+
   create_cmd('Gcbc', function(opts)
     local cmd = 'git branch --sort=-committerdate'
     if opts and opts.fargs and #opts.fargs > 0 then
@@ -204,7 +215,6 @@ local function setup()
       end
     end
 
-    local term = require('forgit.term').run
     term({ cmd = cmd, autoclose = true })
   end, { nargs = '*' })
 
