@@ -70,12 +70,17 @@ local function setup()
       if _FORGIT_CFG.fugitive then
         vim.cmd(cmdstr)
       else
-        local lines = vim.fn.systemlist(vim.split(cmdstr, ' '))
-        if _FORGIT_CFG.show_result == 'quickfix' then
-          vim.fn.setqflist({}, 'a', { title = 'cmd', lines = lines })
-          vim.cmd('copen')
+        if type(cmd) == 'string' and cmd:find('diff') then
+          local term = require('forgit.term').run
+          term({ cmd = cmd, autoclose = true })
         else
-          vim.notify(table.concat(lines, '\n'))
+          local lines = vim.fn.systemlist(vim.split(cmdstr, ' '))
+          if _FORGIT_CFG.show_result == 'quickfix' then
+            vim.fn.setqflist({}, 'a', { title = 'cmd', lines = lines })
+            vim.cmd('copen')
+          else
+            vim.notify(table.concat(lines, '\n'))
+          end
         end
       end
       vim.notify(cmdstr)
@@ -93,6 +98,21 @@ local function setup()
       master = 'master'
     end
     local cmd = string.format('git diff %s --name-only', master)
+    if opts and opts.fargs and #opts.fargs > 0 then
+      for _, arg in ipairs(opts.fargs) do
+        cmd = cmd .. ' ' .. arg
+      end
+    end
+    cmd = vim.split(cmd, ' ')
+    print(vim.inspect(cmd))
+    local fzf = require('forgit.fzf').run
+    fzf(cmd, function(line)
+      vim.cmd('edit ' .. line)
+    end)
+  end, { nargs = '*' })
+
+  create_cmd('Gdul', function(opts)
+    local cmd = 'git diff --name-only'
     if opts and opts.fargs and #opts.fargs > 0 then
       for _, arg in ipairs(opts.fargs) do
         cmd = cmd .. ' ' .. arg
@@ -157,17 +177,24 @@ local function setup()
   create_cmd('Gdc', function(opts)
     local sh = vim.o.shell
 
-    local delta = '|delta'
-    if vim.fn.executable('delta') == 0 then
-      delta = ''
+    local diff = ''
+    if _FORGIT_CFG.diff ~= '' then
+      if _FORGIT_CFG.diff == 'delta' then
+        local diff = '|delta --side-by-side -w $FZF_PREVIEW_COLUMNS'
+        if vim.fn.executable('delta') == 0 then
+          diff = ''
+        end
+      else
+        diff = '|' .. _FORGIT_CFG.diff
+      end
     end
-    local cmd = [[hash=$(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]'); git diff $hash --name-only|fzf -m --ansi --preview "git diff $hash --color=always -- {-1}]]
-      .. delta
+    local cmd = [[hash=$(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]'); git diff $hash --name-only|fzf -m --ansi  --preview-window "right,75%"  --preview "git diff $hash --color=always -- {-1}]]
+      .. diff
       .. '"'
       .. '|xargs -r git difftool $hash'
     if sh:find('fish') then
-      cmd = [[set hash $(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]') ; git diff $hash --name-only|fzf -m --ansi --preview "git diff $hash --color=always -- {-1}]]
-        .. delta
+      cmd = [[set hash $(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]') ; git diff $hash --name-only|fzf -m --ansi  --preview-window "right,75%"  --preview "git diff $hash --color=always -- {-1}]]
+        .. diff
         .. '"'
         .. '|xargs -r git difftool $hash'
     end
@@ -184,19 +211,80 @@ local function setup()
   create_cmd('Gdct', function(opts)
     local sh = vim.o.shell
 
-    local delta = '|delta'
-    if vim.fn.executable('delta') == 0 then
-      delta = ''
+    local diff = ''
+    if _FORGIT_CFG.diff ~= '' then
+      if _FORGIT_CFG.diff == 'delta' then
+        local diff = '|delta --side-by-side -w $FZF_PREVIEW_COLUMNS'
+        if vim.fn.executable('delta') == 0 then
+          diff = ''
+        end
+      else
+        diff = '|' .. _FORGIT_CFG.diff
+      end
     end
-    local cmd = [[hash=$(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]'); git diff $hash --name-only|fzf -m --ansi --preview "git diff $hash --color=always -- {-1}]]
-      .. delta
+
+    local cmd = [[hash=$(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]'); git diff $hash --name-only|fzf -m --ansi --p review-window "right,72%" --preview "git diff $hash --color=always -- {-1}]]
+      .. diff
       .. '"'
       .. '| xargs git difftool $hash'
     if sh:find('fish') then
-      cmd = [[set hash $(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]') ; git diff $hash --name-only|fzf -m --ansi --preview "git diff $hash --color=always -- {-1}]]
-        .. delta
+      cmd = [[set hash $(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]') ; git diff $hash --name-only|fzf -m --ansi --p review-window "right,72%" --preview "git diff $hash --color=always -- {-1}]]
+        .. diff
         .. '"'
         .. '| xargs git difftool $hash'
+    end
+    if opts and opts.fargs and #opts.fargs > 0 then
+      for _, arg in ipairs(opts.fargs) do
+        cmd = cmd .. ' ' .. arg
+      end
+    end
+
+    local term = require('forgit.term').run
+    term({ cmd = cmd, autoclose = true })
+  end, { nargs = '*' })
+
+  create_cmd('Gdcd', function(opts)
+    local cmd = [[git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset']]
+    if opts and opts.fargs and #opts.fargs > 0 then
+      for _, arg in ipairs(opts.fargs) do
+        cmd = cmd .. ' ' .. arg
+      end
+    end
+    -- cmd = vim.split(cmd, ' ')
+    local fzf = require('forgit.fzf').run
+    print(vim.inspect(cmd))
+    fzf(cmd, function(line)
+      print(line)
+      local hex = vim.regex([[[0-9a-fA-F]\+]])
+      hex:match_str(line)
+      local b, e = hex:match_str(line)
+      if b and e then
+        local hash = line:sub(b, e)
+        vim.cmd('DiffviewOpen ' .. hash)
+      end
+    end)
+  end, { nargs = '*' })
+
+  create_cmd('Gdcda', function(opts)
+    local sh = vim.o.shell
+
+    local diff = ''
+    if _FORGIT_CFG.diff ~= '' then
+      if _FORGIT_CFG.diff == 'delta' then
+        local diff = '|delta --side-by-side -w $FZF_PREVIEW_COLUMNS'
+        if vim.fn.executable('delta') == 0 then
+          diff = ''
+        end
+      else
+        diff = '|' .. _FORGIT_CFG.diff
+      end
+    end
+
+    local cmd = [[hash=$(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]'); git diff $hash --name-only|fzf -m --ansi --p
+review-window "right,72%" --preview "git diff $hash --color=always -- {-1}]] .. diff .. '"' .. '| xargs git difftool $hash'
+    if sh:find('fish') then
+      cmd = [[set hash $(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]') ; git diff $hash --name-only|fzf -m --ansi --p
+review-window "right,72%" --preview "git diff $hash --color=always -- {-1}]] .. diff .. '"' .. '| xargs git difftool $hash'
     end
     if opts and opts.fargs and #opts.fargs > 0 then
       for _, arg in ipairs(opts.fargs) do

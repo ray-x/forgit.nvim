@@ -2,7 +2,7 @@
 
 forgit plugin for neovim. Run git interactively with fzf inside nvim.
 
-This plug is a wrapper for [forgit](https://github.com/wfxr/forgit) by `Wenxuan Zhang`
+This plug is a wrapper for [forgit](https://github.com/wfxr/forgit) by `Wenxuan Zhang` plus 42 git commands alias
 
 You need
 
@@ -26,14 +26,12 @@ Plug 'ray-x/forgit.nvim'
 ```lua
 require'forgit'.setup({
   diff = 'delta', -- you can use `diff`, `diff-so-fancy`
-  ls_file = 'fd', -- also git ls_file
-  exact = false, -- exact match
-  vsplit = true, -- split forgit window the screen vertically, when set to number
-  -- it is a threadhold when window is larger than the threshold forgit will split vertically,
-  height_ratio = 0.6, -- height ratio of forgit window when split horizontally
-  width_ratio = 0.6, -- height ratio of forgit window when split vertically
-  git_alias = true,  -- git commands alias (see readme)
-  fugitive = false, -- -- git fugitive installed
+  fugitive = false, -- git fugitive installed
+  git_alias = true,  -- git command extensions see: Git command alias
+  show_result = 'quickfix', -- show cmd result in quickfix or notify
+
+  height_ratio = 0.6, -- height ratio of floating window when split horizontally
+  width_ratio = 0.6, -- width ratio of floating window when split vertically
 })
 ```
 
@@ -46,7 +44,7 @@ require'forgit'.setup({
 
 # usage
 
-- If you put your cursor on the word want to replace or visual select the word you want to replace, simply run
+- [forgit](https://github.com/wfxr/forgit) commands supported by this plugin
 
 | Command               | Action                    |
 | :-------------------: | ------------------------- |
@@ -69,13 +67,17 @@ require'forgit'.setup({
 |Gbl     | Interactive `git blame` selector |
 |Gfu     | Interactive `git commit --fixup && git rebase -i --autosquash` selector |
 
-- Other git + fzf commands
+- non forgit git + fzf commands supported by this plugin
 
 | Command               | Action                    |
 | :-------------------: | ------------------------- |
-|Gdl      | Interactive `git diff --name-only & edit select file` generator |
-|Gcbc     | Interactive `git branch --sort=-committerdate && checkout` generator |
-|Gdc     | Interactive `git diff hash` generator |
+|Gdl     | Interactive `git diff master/main --name-only & edit selected file` generator |
+|Gdul    | Interactive `git diff --name-only & edit selected file` generator |
+|Gcbc    | Interactive `git branch --sort=-committerdate && checkout` generator |
+|Gdc     | Interactive `git log commit_hash & show diff info` generator |
+|Gdct    | Interactive `git log commit_hash & difftool filename` generator |
+|Gdcta    | Interactive `git log commit_hash & difftool all files` generator |
+|Gdcd    | Interactive `git log commit_hash & DiffviewOpen with diffview.nvim` generator |
 
 ### ⌨  Forgit Keybinds
 
@@ -151,3 +153,6 @@ require'forgit'.setup({
 - [`emoji-cli`](https://github.com/wfxr/emoji-cli): Emoji support for `git log`.
 
 - git fugitive
+
+- [diffview.nvim](https://github.com/sindrets/diffview.nvim)
+

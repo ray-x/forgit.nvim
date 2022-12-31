@@ -3,15 +3,13 @@ local M = {}
 local utils = require('forgit.utils')
 local log = utils.log
 _FORGIT_CFG = {
-  ls_file = 'fd', -- git ls-file
   fugitive = false,
   git_alias = true,
-  diff = 'delta', -- diff-so-fancy
-  exact = false, -- Exact match
+  diff = 'delta', -- diff-so-fancy, diff
   vsplit = true, -- split forgit window the screen vertically
   show_result = 'quickfix', -- show cmd result in quickfix or notify
-  height_ratio = 0.6, -- height ratio of forgit window when split horizontally
-  width_ratio = 0.6, -- height ratio of forgit window when split vertically
+  height_ratio = 0.6, -- height ratio of floating window when split horizontally
+  width_ratio = 0.6, -- width ratio of floating window when split vertically
 }
 
 local create_cmd = function(cmd, func, opt)
@@ -47,10 +45,6 @@ local cmds = {
 M.setup = function(cfg)
   cfg = cfg or {}
   _FORGIT_CFG = vim.tbl_extend('force', _FORGIT_CFG, cfg)
-
-  if not guihua_helper.is_installed(_FORGIT_CFG.ls_file) then
-    print('please install ' .. _FORGIT_CFG.ls_file .. ' e.g. `brew install' .. _FORGIT_CFG.ls_file .. '`')
-  end
 
   if not guihua_helper.is_installed('fzf') then
     print('please install fzf e.g. `brew install fzf')
