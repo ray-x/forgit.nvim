@@ -6,6 +6,9 @@ local create_cmd = function(cmd, func, opt)
   vim.api.nvim_create_user_command(cmd, func, opt)
 end
 
+local utils = require('forgit.utils')
+local log = utils.log
+
 local function setup()
   local git = 'git'
   if _FORGIT_CFG.fugitive then
@@ -83,6 +86,8 @@ local function setup()
           end
         end
       end
+
+      log(cmdstr)
       vim.notify(cmdstr)
     end, { nargs = '*' })
   end
@@ -103,6 +108,8 @@ local function setup()
         cmd = cmd .. ' ' .. arg
       end
     end
+
+    log(cmd)
     cmd = vim.split(cmd, ' ')
     print(vim.inspect(cmd))
     local fzf = require('forgit.fzf').run
@@ -118,6 +125,8 @@ local function setup()
         cmd = cmd .. ' ' .. arg
       end
     end
+
+    log(cmd)
     cmd = vim.split(cmd, ' ')
     print(vim.inspect(cmd))
     local fzf = require('forgit.fzf').run
@@ -139,6 +148,8 @@ local function setup()
         cmd = cmd .. ' ' .. arg
       end
     end
+
+    log(cmd)
     cmd = vim.split(cmd, ' ')
     local fzf = require('forgit.fzf').run
     fzf(cmd, function(line)
@@ -167,6 +178,8 @@ local function setup()
         cmd = cmd .. ' ' .. arg
       end
     end
+
+    log(cmd)
     cmd = vim.split(cmd, ' ')
     term({ cmd = cmd, autoclose = true })
   end, { nargs = '*' })
@@ -178,6 +191,8 @@ local function setup()
         cmd = cmd .. ' ' .. arg
       end
     end
+
+    log(cmd)
     cmd = vim.split(cmd, ' ')
     local fzf = require('forgit.fzf').run
     fzf(cmd, function(line)
@@ -215,6 +230,7 @@ local function setup()
       end
     end
 
+    log(cmd)
     term({ cmd = cmd, autoclose = true })
   end, { nargs = '*' })
 
@@ -249,6 +265,7 @@ local function setup()
       end
     end
 
+    log(cmd)
     term({ cmd = cmd, autoclose = true })
   end, { nargs = '*' })
 
@@ -261,7 +278,7 @@ local function setup()
     end
     -- cmd = vim.split(cmd, ' ')
     local fzf = require('forgit.fzf').run
-    print(vim.inspect(cmd))
+    log(cmd)
     fzf(cmd, function(line)
       print(line)
       local hex = vim.regex([[[0-9a-fA-F]\+]])
@@ -301,6 +318,7 @@ review-window "right,72%" --preview "git diff $hash --color=always -- {-1}]] .. 
       end
     end
 
+    log(cmd)
     term({ cmd = cmd, autoclose = true })
   end, { nargs = '*' })
 end
