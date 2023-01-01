@@ -25,6 +25,7 @@ Plug 'ray-x/forgit.nvim'
 
 ```lua
 require'forgit'.setup({
+  debug = false, -- enable debug logging default path is ~/.cache/nvim/forgit.log
   diff = 'delta', -- you can use `diff`, `diff-so-fancy`
   fugitive = false, -- git fugitive installed
   git_alias = true,  -- git command extensions see: Git command alias
