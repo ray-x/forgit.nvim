@@ -57,11 +57,23 @@ M.setup = function(cfg)
   end
   for _, cmd in ipairs(cmds) do
     -- create_cmd(cmd, 'lua require("forgit").' .. cmd:lower() .. '()')
-    create_cmd(cmd, function(_)
+    create_cmd(cmd, function(opts)
       cmd = string.lower(cmd)
+      local autoclose
+      if vim.tbl_contains({ 'gd' }, cmd) then
+        autoclose = false
+      else
+        autoclose = true
+      end
+      if opts and opts.fargs and #opts.fargs > 0 then
+        for _, arg in ipairs(opts.fargs) do
+          cmd = cmd .. ' ' .. arg
+        end
+      end
       local term = require('forgit.term').run
-      term({ cmd = cmd, autoclose = true })
-    end)
+      log(cmd)
+      term({ cmd = cmd, autoclose = autoclose })
+    end, { nargs = '*' })
   end
   if _FORGIT_CFG.git_alias then
     require('forgit.commands').setup()
