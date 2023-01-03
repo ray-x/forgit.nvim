@@ -31,6 +31,7 @@ require'forgit'.setup({
   git_alias = true,  -- git command extensions see: Git command alias
   show_result = 'quickfix', -- show cmd result in quickfix or notify
 
+  shell_mode = true, -- set to true if you using zsh/bash and can not run forgit commands
   height_ratio = 0.6, -- height ratio of floating window when split horizontally
   width_ratio = 0.6, -- width ratio of floating window when split vertically
 })

@@ -7,6 +7,7 @@ _FORGIT_CFG = {
   log_path = nil, -- set to a path to log to a file
   fugitive = false,
   git_alias = true,
+  shell_mode = true, -- set to true if you running zsh and having trouble with the shell command
   diff = 'delta', -- diff-so-fancy, diff
   vsplit = true, -- split forgit window the screen vertically
   show_result = 'quickfix', -- show cmd result in quickfix or notify
@@ -71,6 +72,11 @@ M.setup = function(cfg)
         for _, arg in ipairs(opts.fargs) do
           cmd = cmd .. ' ' .. arg
         end
+      end
+      local sh = vim.o.shell
+      if _FORGIT_CFG.shell_mode and (sh:find('zsh') or sh:find('bash')) then
+        log('cmd: ' .. cmd)
+        cmd = sh .. ' -i -c ' .. cmd
       end
       local term = require('forgit.term').run
       log(cmd)
