@@ -1,14 +1,15 @@
 local M = {}
-local sep = vim.loop.os_uname().sysname == 'Windows' and '\\' or '/'
 local vfn = vim.fn
-M.run = function(cmd, sink)
-  local wrapped = vfn['fzf#wrap']({
+M.run = function(cmd, sink, opts)
+  local wrap_opts = {
     source = vim.fn.systemlist(cmd),
-    options = {},
     sink = sink,
-  })
+  }
+  if opts then
+    wrap_opts.options = opts
+  end
 
-  vfn['fzf#run'](wrapped)
+  vfn['fzf#run'](vfn['fzf#wrap'](wrap_opts))
 end
 
 return M

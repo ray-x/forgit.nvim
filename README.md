@@ -74,13 +74,14 @@ require'forgit'.setup({
 | Command               | Action                    |
 | :-------------------: | ------------------------- |
 |Gfz     | run `git fuzzy`, sub commands supports, e.g. `Gfz status` |
-|Gdl     | Interactive `git diff master/main --name-only & edit selected file` generator |
-|Gdul    | Interactive `git diff --name-only & edit selected file` generator |
+|Gdl     | Interactive `git diff --name-only & edit selected file` generator |
+|Gdl!    | Interactive `git diff master/main --name-only & edit selected file` generator |
 |Gcbc    | Interactive `git branch --sort=-committerdate && checkout` generator |
 |Gdc     | Interactive `git log commit_hash & show diff against current` generator |
-|Gdct    | Interactive `git log commit_hash & difftool hash of selected filename` generator |
-|Gdcta    | Interactive `git log commit_hash & difftool hash of all files` generator |
-|Gdcd    | Interactive `git log commit_hash & DiffviewOpen with diffview.nvim` generator |
+|Gldt    | Interactive `git log commit_hash & difftool hash of selected filename` generator |
+|Gldt!    | Interactive `git log commit_hash & difftool hash of all files` generator |
+|Gldo    | Interactive `git log commit_hash & DiffviewOpen current file with diffview.nvim` generator |
+|Gldo!    | Interactive `git log commit_hash & DiffviewOpen all diff files with diffview.nvim` generator |
 
 ### ⌨  Forgit Keybinds
 
