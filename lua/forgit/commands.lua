@@ -5,7 +5,7 @@ local create_cmd = function(cmd, func, opt)
   opt = vim.tbl_extend('force', { desc = 'git command alias ' .. cmd }, opt or {})
   vim.api.nvim_create_user_command(cmd, func, opt)
 end
-
+_FORGIT_CFG = _FORGIT_CFG or {} -- supress warnings
 local utils = require('forgit.utils')
 local log = utils.log
 
@@ -67,8 +67,16 @@ local function setup()
     end
     create_cmd(name, function(opts)
       if opts and opts.fargs and #opts.fargs > 0 then
-        for _, arg in ipairs(opts.fargs) do
-          cmdstr = cmdstr .. ' ' .. arg
+        if cmdstr:find('commit') then
+          cmdstr = '!' .. cmdstr
+          for _, arg in ipairs(opts.fargs) do
+            cmdstr = cmdstr .. ' ' .. arg
+          end
+          return vim.cmd(cmdstr)
+        else
+          for _, arg in ipairs(opts.fargs) do
+            cmdstr = cmdstr .. ' ' .. arg
+          end
         end
       end
       if _FORGIT_CFG.fugitive then
@@ -79,7 +87,7 @@ local function setup()
         else
           local lines = vim.fn.systemlist(vim.split(cmdstr, ' '))
           if _FORGIT_CFG.show_result == 'quickfix' then
-            vim.fn.setqflist({}, 'a', { title = 'cmd', lines = lines })
+            vim.fn.setqflist({}, 'a', { title = cmdstr, lines = lines })
             vim.cmd('copen')
           else
             vim.notify(table.concat(lines, '\n'))
@@ -89,7 +97,7 @@ local function setup()
 
       log(cmdstr)
       vim.notify(cmdstr)
-    end, { nargs = '*' })
+    end, { nargs = '*', desc = 'forgit command alias ' .. cmdstr })
   end
 
   -- other commmands
@@ -116,7 +124,7 @@ local function setup()
     fzf(cmd, function(line)
       vim.cmd('edit ' .. line)
     end)
-  end, { nargs = '*' })
+  end, { nargs = '*', desc = 'git git diff & open file' })
 
   create_cmd('Gdul', function(opts)
     local cmd = 'git diff --name-only'
@@ -133,7 +141,7 @@ local function setup()
     fzf(cmd, function(line)
       vim.cmd('edit ' .. line)
     end)
-  end, { nargs = '*' })
+  end, { nargs = '*', desc = 'git diff & open file' })
 
   create_cmd('Gdl', function(opts)
     local master = vim.fn.system('git rev-parse --abbrev-ref master')
@@ -155,7 +163,7 @@ local function setup()
     fzf(cmd, function(line)
       vim.cmd('edit ' .. line)
     end)
-  end, { nargs = '*' })
+  end, { nargs = '*', desc = 'git diff master/main & open file' })
 
   create_cmd('Gbs', function(opts)
     local cmd = 'git branch --sort=-committerdate'
@@ -182,7 +190,7 @@ local function setup()
     log(cmd)
     cmd = vim.split(cmd, ' ')
     term({ cmd = cmd, autoclose = true })
-  end, { nargs = '*' })
+  end, { nargs = '*', desc = 'git fuzzy' })
 
   create_cmd('Gcbc', function(opts)
     local cmd = 'git branch --sort=-committerdate'
@@ -198,7 +206,7 @@ local function setup()
     fzf(cmd, function(line)
       print(vim.fn.system('git checkout ' .. line))
     end)
-  end, { nargs = '*' })
+  end, { nargs = '*', desc = 'git branch | fzf | xargs git co -b' })
 
   create_cmd('Gdc', function(opts)
     local sh = vim.o.shell
@@ -206,7 +214,7 @@ local function setup()
     local diff = ''
     if _FORGIT_CFG.diff ~= '' then
       if _FORGIT_CFG.diff == 'delta' then
-        local diff = '|delta --side-by-side -w $FZF_PREVIEW_COLUMNS'
+        diff = '|delta --side-by-side -w $FZF_PREVIEW_COLUMNS'
         if vim.fn.executable('delta') == 0 then
           diff = ''
         end
@@ -232,7 +240,7 @@ local function setup()
 
     log(cmd)
     term({ cmd = cmd, autoclose = true })
-  end, { nargs = '*' })
+  end, { nargs = '*', desc = 'git diff | fzf | xargs git difftool' })
 
   create_cmd('Gdct', function(opts)
     local sh = vim.o.shell
@@ -240,7 +248,7 @@ local function setup()
     local diff = ''
     if _FORGIT_CFG.diff ~= '' then
       if _FORGIT_CFG.diff == 'delta' then
-        local diff = '|delta --side-by-side -w $FZF_PREVIEW_COLUMNS'
+        diff = '|delta --side-by-side -w $FZF_PREVIEW_COLUMNS'
         if vim.fn.executable('delta') == 0 then
           diff = ''
         end
@@ -267,7 +275,7 @@ local function setup()
 
     log(cmd)
     term({ cmd = cmd, autoclose = true })
-  end, { nargs = '*' })
+  end, { nargs = '*', desc = 'git diff | fzf | xargs git difftool <hash> file name' })
 
   create_cmd('Gdcd', function(opts)
     local cmd = [[git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset']]
@@ -289,7 +297,7 @@ local function setup()
         vim.cmd('DiffviewOpen ' .. hash)
       end
     end)
-  end, { nargs = '*' })
+  end, { nargs = '*', desc = 'select hash and diff with DiffviewOpen' })
 
   create_cmd('Gdcda', function(opts)
     local sh = vim.o.shell
@@ -320,7 +328,7 @@ review-window "right,72%" --preview "git diff $hash --color=always -- {-1}]] .. 
 
     log(cmd)
     term({ cmd = cmd, autoclose = true })
-  end, { nargs = '*' })
+  end, { nargs = '*', desc = 'git log commit|git diff | difftool <hash>' })
 end
 
 -- term({ cmd = 'git diff --', autoclose = false })

@@ -1,6 +1,6 @@
 # forgit.nvim
 
-forgit plugin for neovim. Run git interactively with fzf inside nvim.
+Run git interactively with fzf inside nvim.
 
 This plug is a wrapper for [forgit](https://github.com/wfxr/forgit) by `Wenxuan Zhang` ; [git-fuzzy](https://github.com/bigH/git-fuzzy), plus neovim extension && 42 git commands alias, it can be integrated with [diffview.nvim](https://github.com/sindrets/diffview.nvim)
 
@@ -77,9 +77,9 @@ require'forgit'.setup({
 |Gdl     | Interactive `git diff master/main --name-only & edit selected file` generator |
 |Gdul    | Interactive `git diff --name-only & edit selected file` generator |
 |Gcbc    | Interactive `git branch --sort=-committerdate && checkout` generator |
-|Gdc     | Interactive `git log commit_hash & show diff info` generator |
-|Gdct    | Interactive `git log commit_hash & difftool filename` generator |
-|Gdcta    | Interactive `git log commit_hash & difftool all files` generator |
+|Gdc     | Interactive `git log commit_hash & show diff against current` generator |
+|Gdct    | Interactive `git log commit_hash & difftool hash of selected filename` generator |
+|Gdcta    | Interactive `git log commit_hash & difftool hash of all files` generator |
 |Gdcd    | Interactive `git log commit_hash & DiffviewOpen with diffview.nvim` generator |
 
 ### ⌨  Forgit Keybinds

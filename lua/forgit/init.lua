@@ -25,24 +25,24 @@ if not guihua_helper then
 end
 
 local cmds = {
-  'Ga',
-  'Glo',
-  'Gi',
-  'Gd',
-  'Grh',
-  'Gcf',
-  'Gcb',
-  'Gbd',
-  'Gct',
-  'Gco',
-  'Grc',
-  'Gss',
-  'Gsp',
-  'Gclean',
-  'Gcp',
-  'Grb',
-  'Gbl',
-  'Gfu',
+  { 'Ga', 'git add' },
+  { 'Glo', 'git log' },
+  { 'Gi', 'git ignore' },
+  { 'Gd', 'git diff' },
+  { 'Grh', 'git reset HEAD <file>' },
+  { 'Gcf', 'git checkout file' },
+  { 'Gcb', 'git checkout <branch>' },
+  { 'Gbd', 'git checkout -D branch' },
+  { 'Gct', 'git checkout <tag>' },
+  { 'Gco', 'git checkout <commit>' },
+  { 'Grc', 'git revert <commit>' },
+  { 'Gss', 'git stash' },
+  { 'Gsp', 'git stash push' },
+  { 'Gclean', 'git clean' },
+  { 'Gcp', 'git cherry-pick' },
+  { 'Grb', 'git rebase -i' },
+  { 'Gbl', 'git blame' },
+  { 'Gfu', 'git commit --fixup && git rebase -i --autosquash' },
 }
 
 M.setup = function(cfg)
@@ -58,8 +58,10 @@ M.setup = function(cfg)
   if not guihua_helper.is_installed('git') then
     print('please install git ')
   end
-  for _, cmd in ipairs(cmds) do
+  for _, cmd_info in ipairs(cmds) do
     -- create_cmd(cmd, 'lua require("forgit").' .. cmd:lower() .. '()')
+    local cmd = cmd_info[1]
+    local cmd_details = cmd_info[2]
     create_cmd(cmd, function(opts)
       local cmdstr = string.lower(cmd)
       local autoclose
@@ -81,7 +83,7 @@ M.setup = function(cfg)
       local term = require('forgit.term').run
       log(cmdstr)
       term({ cmd = cmdstr, autoclose = autoclose })
-    end, { nargs = '*' })
+    end, { nargs = '*', desc = 'forgit ' .. cmd_details })
   end
   if _FORGIT_CFG.git_alias then
     require('forgit.commands').setup()
