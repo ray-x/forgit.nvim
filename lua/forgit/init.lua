@@ -61,26 +61,26 @@ M.setup = function(cfg)
   for _, cmd in ipairs(cmds) do
     -- create_cmd(cmd, 'lua require("forgit").' .. cmd:lower() .. '()')
     create_cmd(cmd, function(opts)
-      local initial_cmd = string.lower(cmd)
+      local cmdstr = string.lower(cmd)
       local autoclose
-      if vim.tbl_contains({ 'gd' }, initial_cmd) then
+      if vim.tbl_contains({ 'gd' }, cmdstr) then
         autoclose = false
       else
         autoclose = true
       end
       if opts and opts.fargs and #opts.fargs > 0 then
         for _, arg in ipairs(opts.fargs) do
-          initial_cmd = initial_cmd .. ' ' .. arg
+          cmdstr = cmdstr .. ' ' .. arg
         end
       end
       local sh = vim.o.shell
       if _FORGIT_CFG.shell_mode and (sh:find('zsh') or sh:find('bash')) then
-        log('cmd: ' .. initial_cmd)
-        initial_cmd = sh .. ' -i -c ' .. initial_cmd
+        log('cmd: ' .. cmdstr)
+        cmdstr = sh .. ' -i -c ' .. cmdstr
       end
       local term = require('forgit.term').run
-      log(initial_cmd)
-      term({ cmd = initial_cmd, autoclose = autoclose })
+      log(cmdstr)
+      term({ cmd = cmdstr, autoclose = autoclose })
     end, { nargs = '*' })
   end
   if _FORGIT_CFG.git_alias then
