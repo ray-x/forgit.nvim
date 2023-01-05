@@ -122,10 +122,11 @@ local function setup()
     log(cmd)
     cmd = vim.split(cmd, ' ')
     print(vim.inspect(cmd))
+    local preview_cmd = [[--preview "git diff | delta"]]
     local fzf = require('forgit.fzf').run
     fzf(cmd, function(line)
       vim.cmd('edit ' .. line)
-    end)
+    end, preview_cmd)
   end, { nargs = '*', bang = true, desc = 'forgit: git diff --name-only & open file' })
 
   create_cmd('Gbs', function(opts)
@@ -137,9 +138,10 @@ local function setup()
     end
     cmd = vim.split(cmd, ' ')
     local fzf = require('forgit.fzf').run
+    local preview_cmd = [[--preview "echo {} | xargs git diff | delta"]]
     fzf(cmd, function(line)
       print(vim.fn.system('git checkout ' .. line))
-    end)
+    end, preview_cmd)
   end, { nargs = '*' })
 
   create_cmd('Gfz', function(opts)
@@ -168,7 +170,7 @@ local function setup()
     local fzf = require('forgit.fzf').run
     fzf(cmd, function(line)
       print(vim.fn.system('git checkout ' .. line))
-    end)
+    end, [[--ansi --preview "git log --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' {1}"]])
   end, { nargs = '*', desc = 'git branch | fzf | xargs git co ' })
 
   create_cmd('Gdc', function(opts)
@@ -203,7 +205,7 @@ local function setup()
 
     log(cmd)
     term({ cmd = cmd, autoclose = true })
-  end, { nargs = '*', desc = 'git diff | fzf | xargs git difftool' })
+  end, { nargs = '*', desc = 'git log | fzf | xargs git difftool' })
 
   create_cmd('Gbdo', function(opts)
     local cmd = [[git branch]]
