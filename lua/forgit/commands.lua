@@ -122,7 +122,7 @@ local function setup()
     log(cmd)
     cmd = vim.split(cmd, ' ')
     print(vim.inspect(cmd))
-    local preview_cmd = [[--preview "git diff | delta"]]
+    local preview_cmd = [[--preview "git diff | delta -w $FZF_PREVIEW_COLUMNS"]]
     local fzf = require('forgit.fzf').run
     fzf(cmd, function(line)
       vim.cmd('edit ' .. line)
@@ -138,7 +138,7 @@ local function setup()
     end
     cmd = vim.split(cmd, ' ')
     local fzf = require('forgit.fzf').run
-    local preview_cmd = [[--preview "echo {} | xargs git diff | delta"]]
+    local preview_cmd = [[--preview "echo {} | xargs git diff | delta -w $FZF_PREVIEW_COLUMNS"]]
     fzf(cmd, function(line)
       print(vim.fn.system('git checkout ' .. line))
     end, preview_cmd)
@@ -240,7 +240,7 @@ local function setup()
     end
 
     local preview_cmd =
-      [[--preview-window "right,60%" --preview "echo {} | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]' | xargs -I% git show --color=always -U$_forgit_preview_context % -- $(sed -nE 's/.* -- (.*)/\1/p' <<< "$*") | delta"]]
+      [[--preview-window "right,60%" --preview "echo {} | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]' | xargs -I% git show --color=always -U$_forgit_preview_context % -- $(sed -nE 's/.* -- (.*)/\1/p' <<< "$*") | delta -w $FZF_PREVIEW_COLUMNS"]]
 
     if opts and opts.fargs and #opts.fargs > 0 then
       for _, arg in ipairs(opts.fargs) do
