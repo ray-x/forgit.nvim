@@ -1,13 +1,18 @@
 # forgit.nvim
 
-Run git interactively with fzf inside nvim.
+Interactive git commands with fzf.
 
-This plug is a wrapper for [forgit](https://github.com/wfxr/forgit) by `Wenxuan Zhang` ; [git-fuzzy](https://github.com/bigH/git-fuzzy), plus neovim extension && 42 git commands alias, it can be integrated with [diffview.nvim](https://github.com/sindrets/diffview.nvim)
+This plug is a wrapper of interactive git commands
+ * [forgit](https://github.com/wfxr/forgit) by `Wenxuan Zhang`
+ * [git-fuzzy](htps://github.com/bigH/git-fuzzy)
+ * 42 git commands alias
+ * integrated with [diffview.nvim](https://github.com/sindrets/diffview.nvim)
 
 You need
 
 - [install forgit](https://github.com/wfxr/forgit)
 - [fzf](https://github.com/junegunn/fzf) so you can confirm/select the matches to apply your changes
+- install git-fuzzy (optional)
 - by default the plugin using [fd](https://github.com/sharkdp/fd) to list all files in the current folder, you can use
   `git ls_file`
 - a pager tool, e.g. `delta`
@@ -79,9 +84,9 @@ require'forgit'.setup({
 |Gcbc    | Interactive `git branch --sort=-committerdate && checkout` generator |
 |Gdc     | Interactive `git log commit_hash & show diff against current` generator |
 |Gldt    | Interactive `git log commit_hash & difftool hash of selected filename` generator |
-|Gldt!    | Interactive `git log commit_hash & difftool hash of all files` generator |
+|Gldt!   | Interactive `git log commit_hash & difftool hash of all files` generator |
 |Gldo    | Interactive `git log commit_hash & DiffviewOpen current file with diffview.nvim` generator |
-|Gldo!    | Interactive `git log commit_hash & DiffviewOpen all diff files with diffview.nvim` generator |
+|Gldo!   | Interactive `git log commit_hash & DiffviewOpen all diff files with diffview.nvim` generator |
 
 ### ⌨  Forgit Keybinds
 
