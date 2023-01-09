@@ -54,22 +54,24 @@ local function setup()
     Gtop = git .. ' rev-parse --show-toplevel',
     Gurl = git .. ' config --get remote.origin.url',
   }
+
   for name, cmd in pairs(cmds) do
-    local cmdstr = cmd
-    if type(cmd) == 'table' then
-      if _FORGIT_CFG.fugitive then
-        cmdstr = cmd.fcmd
-      else
-        cmdstr = cmd.cmd
-      end
-    end
     create_cmd(name, function(opts)
+      local cmdstr = cmd
+      if type(cmd) == 'table' then
+        if _FORGIT_CFG.fugitive then
+          cmdstr = cmd.fcmd
+        else
+          cmdstr = cmd.cmd
+        end
+      end
       if opts and opts.fargs and #opts.fargs > 0 then
         if cmdstr:find('commit') and not _FORGIT_CFG.fugitive then
           cmdstr = '!' .. cmdstr
           for _, arg in ipairs(opts.fargs) do
             cmdstr = cmdstr .. ' ' .. arg
           end
+          log(cmdstr)
           return vim.cmd(cmdstr)
         else
           for _, arg in ipairs(opts.fargs) do
@@ -97,7 +99,7 @@ local function setup()
 
       log(cmdstr)
       vim.notify(cmdstr)
-    end, { nargs = '*', desc = 'forgit command alias ' .. cmdstr })
+    end, { nargs = '*', desc = 'forgit command alias ' .. vim.inspect(cmd) })
   end
 
   -- other commmands
@@ -307,7 +309,7 @@ local function setup()
     term({ cmd = cmd, autoclose = true })
   end, { nargs = '*', bang = true, desc = 'git log | diff | fzf | xargs git difftool <hash> file name/all(!)' })
 end
-  
+
 -- term({ cmd = 'git diff --', autoclose = false })
 
 return {
