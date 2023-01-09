@@ -7,7 +7,7 @@ end
 
 local term_name = 'forgit_floaterm'
 
-local function close_float_terminal()
+local function close_float_terminal(code, data)
   local has_var, float_term_win = pcall(api.nvim_buf_get_var, 0, term_name)
   if not has_var or not float_term_win then
     return
@@ -19,6 +19,9 @@ local function close_float_terminal()
   if float_term_win[2] ~= nil and api.nvim_win_is_valid(float_term_win[2]) then
     api.nvim_win_close(float_term_win[2], true)
   end
+  if code or data then
+    vim.notify(vim.inspect(code) .. vim.inspect(data))
+  end
 end
 
 local term = function(opts)
@@ -27,6 +30,12 @@ local term = function(opts)
   opts.vsplit = _FORGIT_CFG.vsplit
   opts.height_ratio = _FORGIT_CFG.height_ratio
   opts.width_ratio = _FORGIT_CFG.width_ratio
+  opts.closer = function(c, d)
+    if d ~= 0 then
+      local msg = string.format("Error: %s jobid: %s exit code: %s" ,opts.cmd , vim.inspect(c) , vim.inspect(d))
+      vim.notify('Error: ' .. opts.cmd .. vim.inspect(c) .. vim.inspect(d))
+    end
+  end
   return guihua_term.gui_term(opts)
 end
 
