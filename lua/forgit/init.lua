@@ -42,7 +42,7 @@ local ga_bang = function(opts)
 
   local cmd = '$(git diff --name-only --cached | fzf -m --preview="git diff --cached $(echo {})'
     .. diff
-    .. '");   echo $files | xargs  git restore --staged '
+    .. '");   echo $files | xargs -r git restore --staged '
   if sh:find('fish') then
     cmd = [[set files ]] .. cmd
   else

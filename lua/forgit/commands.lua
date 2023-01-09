@@ -175,7 +175,7 @@ local function setup()
     fzf(cmd, function(line)
       print(vim.fn.system('git checkout ' .. line))
     end, [[--ansi --preview "git log --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' {1}"]])
-  end, { nargs = '*', desc = 'git branch | fzf | xargs git co ' })
+  end, { nargs = '*', desc = 'git branch | fzf | xargs -r git co ' })
 
   create_cmd('Gdc', function(opts)
     local sh = vim.o.shell
