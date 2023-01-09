@@ -50,7 +50,7 @@ require'forgit'.setup({
 
 | Command               | Action                    |
 | :-------------------: | ------------------------- |
-|Ga      | Interactive `git add` generator |
+|Ga{!}   | Interactive `git add` generator, bang! will unstage files |
 |Glo     | Interactive `git log` generator |
 |Gi      | Interactive .gitignore generator |
 |Gd      | Interactive `git diff` viewer |

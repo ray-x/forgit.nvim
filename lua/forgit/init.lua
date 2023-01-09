@@ -24,6 +24,36 @@ if not guihua_helper then
   utils.warn('guihua not installed, please install ray-x/guihua.lua for GUI functions')
 end
 
+local ga_bang = function(opts)
+  local sh = vim.o.shell
+  log('ga_bang', opts)
+
+  local diff = ''
+  if _FORGIT_CFG.diff ~= '' then
+    if _FORGIT_CFG.diff == 'delta' then
+      diff = '|delta --side-by-side -w $FZF_PREVIEW_COLUMNS'
+      if vim.fn.executable('delta') == 0 then
+        diff = ''
+      end
+    else
+      diff = '|' .. _FORGIT_CFG.diff
+    end
+  end
+
+  local cmd = '$(git diff --name-only --cached | fzf -m --preview="git diff --cached $(echo {})'
+    .. diff
+    .. '");   echo $files | xargs  git restore --staged '
+  if sh:find('fish') then
+    cmd = [[set files ]] .. cmd
+  else
+    cmd = [[files=]] .. cmd
+  end
+  log(cmd)
+
+  local term = require('forgit.term').run
+  term({ cmd = cmd, autoclose = true })
+end
+
 local cmds = {
   { 'Ga', 'git add' },
   { 'Glo', 'git log' },
@@ -75,6 +105,12 @@ M.setup = function(cfg)
           cmdstr = cmdstr .. ' ' .. arg
         end
       end
+      if cmdstr:find('ga') and opts.bang then
+        -- allow bang
+        ga_bang(opts)
+        return
+      end
+
       local sh = vim.o.shell
       if _FORGIT_CFG.shell_mode and (sh:find('zsh') or sh:find('bash')) then
         log('cmd: ' .. cmdstr)
@@ -83,11 +119,41 @@ M.setup = function(cfg)
       local term = require('forgit.term').run
       log(cmdstr)
       term({ cmd = cmdstr, autoclose = autoclose })
-    end, { nargs = '*', desc = 'forgit ' .. cmd_details })
+    end, { nargs = '*', bang = true, desc = 'forgit ' .. cmd_details })
   end
+
   if _FORGIT_CFG.git_alias then
     require('forgit.commands').setup()
   end
+  -- git add and commit
+  create_cmd('Gam', function(opts)
+    local cmdstr = 'ga'
+    if opts and opts.fargs and #opts.fargs > 0 then
+      for _, arg in ipairs(opts.fargs) do
+        cmdstr = cmdstr .. ' ' .. arg
+      end
+    end
+    local sh = vim.o.shell
+    if _FORGIT_CFG.shell_mode and (sh:find('zsh') or sh:find('bash')) then
+      log('cmd: ' .. cmdstr)
+      cmdstr = sh .. ' -i -c ' .. cmdstr
+    end
+    local term = require('forgit.term').run
+    log(cmdstr)
+    term({
+      cmd = cmdstr,
+      autoclose = true,
+      on_exit = function(c, d, v)
+        print(c, d, v)
+        if d == 0 then
+          local m = vim.fn.input({ prompt = 'commit message:' })
+          if m ~= '' then
+            vim.cmd('!git commit -m "' .. m .. '"')
+          end
+        end
+      end,
+    })
+  end, { nargs = '*', desc = 'forgit ga & commit' })
 end
 
 return M

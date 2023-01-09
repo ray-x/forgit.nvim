@@ -80,13 +80,15 @@ local function setup()
       if _FORGIT_CFG.fugitive then
         vim.cmd(cmdstr)
       else
-        if type(cmd) == 'string' and cmd:find('diff') or cmd:find('fzf') or cmd:find('show') then
+        if type(cmd) == 'string' and (cmd:find('diff') or cmd:find('fzf') or cmd:find('show')) then
           term({ cmd = cmd, autoclose = false })
         else
           local lines = vim.fn.systemlist(vim.split(cmdstr, ' '))
           if _FORGIT_CFG.show_result == 'quickfix' then
-            vim.fn.setqflist({}, 'a', { title = cmdstr, lines = lines })
-            vim.cmd('copen')
+            if #lines > 0 then
+              vim.fn.setqflist({}, 'a', { title = cmdstr, lines = lines })
+              vim.cmd('copen')
+            end
           else
             vim.notify(table.concat(lines, '\n'))
           end
@@ -267,6 +269,7 @@ local function setup()
     end, preview_cmd)
   end, { nargs = '*', bang = true, desc = 'select hash and diff file/(all!) with DiffviewOpen' })
 
+  -- git log diff tool
   create_cmd('Gldt', function(opts)
     local sh = vim.o.shell
 
@@ -282,15 +285,14 @@ local function setup()
       end
     end
 
-    local cmd = [[hash=$(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]'); git diff $hash --name-only|fzf -m --ansi --preview-window "right,72%" --preview "git diff $hash --color=always -- {-1}]]
+    local cmd = [[$(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]'); git diff $hash --name-only|fzf -m --ansi --preview-window "right,72%" --preview "git diff $hash --color=always -- {-1}]]
       .. diff
       .. '"'
       .. '| xargs git difftool $hash'
     if sh:find('fish') then
-      cmd = [[set hash $(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]') ; git diff $hash --name-only|fzf -m --ansi --preview-window "right,72%" --preview "git diff $hash --color=always -- {-1}]]
-        .. diff
-        .. '"'
-        .. '| xargs git difftool $hash'
+      cmd = [[set hash ]] .. cmd
+    else
+      cmd = [[hash=]] .. cmd
     end
     if not opts.bang then
       cmd = cmd .. ' -- ' .. vim.fn.expand('%')
@@ -305,7 +307,7 @@ local function setup()
     term({ cmd = cmd, autoclose = true })
   end, { nargs = '*', bang = true, desc = 'git log | diff | fzf | xargs git difftool <hash> file name/all(!)' })
 end
-
+  
 -- term({ cmd = 'git diff --', autoclose = false })
 
 return {
