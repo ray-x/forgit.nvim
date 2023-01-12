@@ -39,6 +39,15 @@ local function binary_check()
     warn('fzf is not installed.')
   end
 
+  if vim.fn.exists('*fzf#run') == 1 then
+    info('fzf.vim installed')
+  else
+    no_err = false
+    warn(
+      'fzf#run function not found. You also need Vim plugin from the main fzf repository (i.e. junegunn/fzf *and* fzf#install())'
+    )
+  end
+
   if vfn.executable('fd') == 1 then
     info('fd installed.')
   else

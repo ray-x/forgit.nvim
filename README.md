@@ -11,7 +11,7 @@ This plug is a wrapper of interactive git commands
 You need
 
 - [install forgit](https://github.com/wfxr/forgit)
-- [fzf](https://github.com/junegunn/fzf) so you can confirm/select the matches to apply your changes
+- [fzf](https://github.com/junegunn/fzf) so you can confirm/select the matches to apply your changes, also check [fzf-vim-integration](https://github.com/junegunn/fzf/blob/master/doc/fzf.txt), [as vim plugin](https://github.com/junegunn/fzf#as-vim-plugin) and [fzf README-VIM](https://github.com/junegunn/fzf/blob/master/README-VIM.md)
 - install git-fuzzy (optional)
 - by default the plugin using [fd](https://github.com/sharkdp/fd) to list all files in the current folder, you can use
   `git ls_file`
