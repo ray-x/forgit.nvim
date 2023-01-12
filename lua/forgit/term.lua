@@ -33,7 +33,7 @@ local term = function(opts)
   opts.closer = function(c, d)
     if d ~= 0 then
       local msg = string.format("Error: %s jobid: %s exit code: %s" ,opts.cmd , vim.inspect(c) , vim.inspect(d))
-      vim.notify('Error: ' .. opts.cmd .. vim.inspect(c) .. vim.inspect(d))
+      vim.notify(msg)
     end
   end
   return guihua_term.gui_term(opts)
