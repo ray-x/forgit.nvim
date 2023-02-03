@@ -13,6 +13,7 @@ _FORGIT_CFG = {
   show_result = 'quickfix', -- show cmd result in quickfix or notify
   height_ratio = 0.6, -- height ratio of floating window when split horizontally
   width_ratio = 0.6, -- width ratio of floating window when split vertically
+  cmds_list = {}
 }
 
 local create_cmd = function(cmd, func, opt)
@@ -75,6 +76,8 @@ local cmds = {
   { 'Gfu', 'git commit --fixup && git rebase -i --autosquash' },
 }
 
+M.cmds = cmds
+
 M.setup = function(cfg)
   cfg = cfg or {}
   _FORGIT_CFG = vim.tbl_extend('force', _FORGIT_CFG, cfg)
@@ -122,38 +125,8 @@ M.setup = function(cfg)
     end, { nargs = '*', bang = true, desc = 'forgit ' .. cmd_details })
   end
 
-  if _FORGIT_CFG.git_alias then
-    require('forgit.commands').setup()
-  end
-  -- git add and commit
-  create_cmd('Gam', function(opts)
-    local cmdstr = 'ga'
-    if opts and opts.fargs and #opts.fargs > 0 then
-      for _, arg in ipairs(opts.fargs) do
-        cmdstr = cmdstr .. ' ' .. arg
-      end
-    end
-    local sh = vim.o.shell
-    if _FORGIT_CFG.shell_mode and (sh:find('zsh') or sh:find('bash')) then
-      log('cmd: ' .. cmdstr)
-      cmdstr = sh .. ' -i -c ' .. cmdstr
-    end
-    local term = require('forgit.term').run
-    log(cmdstr)
-    term({
-      cmd = cmdstr,
-      autoclose = true,
-      on_exit = function(c, d, v)
-        print(c, d, v)
-        if d == 0 then
-          local m = vim.fn.input({ prompt = 'commit message:' })
-          if m ~= '' then
-            vim.cmd('!git commit -m "' .. m .. '"')
-          end
-        end
-      end,
-    })
-  end, { nargs = '*', desc = 'forgit ga & commit' })
+  require('forgit.commands').setup()
+  require('forgit.list')
 end
 
 return M

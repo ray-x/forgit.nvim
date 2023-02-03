@@ -39,6 +39,8 @@ require'forgit'.setup({
   shell_mode = true, -- set to true if you using zsh/bash and can not run forgit commands
   height_ratio = 0.6, -- height ratio of floating window when split horizontally
   width_ratio = 0.6, -- width ratio of floating window when split vertically
+  cmds_list = {} -- additional commands to show in Forgit command list
+  --  e.g. cmd_list = {text = 'Gs get_hunks', cmd = 'Gitsigns get_hunks'}
 })
 ```
 
@@ -74,7 +76,7 @@ require'forgit'.setup({
 |Gbl     | Interactive `git blame` selector |
 |Gfu     | Interactive `git commit --fixup && git rebase -i --autosquash` selector |
 
-- non forgit git + fzf commands supported by this plugin
+- git + fzf commands supported only by this plugin
 
 | Command               | Action                    |
 | :-------------------: | ------------------------- |
