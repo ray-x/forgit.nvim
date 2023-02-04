@@ -30,7 +30,7 @@ local commit_input = function(args)
   -- center pos
   local r, c = require('guihua.location').center(1, 60)
   require('guihua.input').input(
-    { prompt = 'Enter commit message: ', width = 40, relative = 'editor', row = r, col = c },
+    { prompt = 'commit message: ', width = 40, relative = 'editor', row = r, col = c },
     function(message)
       if message == nil then
         return
@@ -41,14 +41,13 @@ local commit_input = function(args)
   )
 end
 
-function M.setup()
-  local git = 'git'
+local function use_fugitive()
+  return _FORGIT_CFG.fugitive and fugitive_installed()
+end
 
-  local use_fugitive = false
-  if _FORGIT_CFG.fugitive and fugitive_installed() then
-    git = 'Git'
-    use_fugtive = true
-  end
+function M.setup()
+  local git = '' -- leading? delay the eval for lazyloading
+
   cmds = {
     Gaa = git .. [[ add --all]],
     Gap = git .. ' add -pu',
@@ -113,7 +112,14 @@ function M.setup()
         end
       end
 
-      if cmdstr:find('commit') and not use_fugitive then
+      if use_fugitive() then
+        git = 'Git'
+      else
+        git = '!git'
+      end
+      cmdstr = git .. cmdstr -- here is the place to assign Git/!git
+
+      if cmdstr:find('commit') and not use_fugitive() then
         return commit_input(opts.fargs)
       end
       if vim.fn.empty(opts.fargs) == 0 then
@@ -122,7 +128,6 @@ function M.setup()
           log(cmdstr)
         end
       end
-      lprint(cmdstr)
       if use_fugitive then
         vim.cmd(cmdstr)
       else
@@ -175,7 +180,11 @@ function M.setup()
       on_exit = function(c, d, v)
         print(c, d, v)
         if d == 0 then
-          commit_input()
+          if use_fugitive then
+            vim.cmd('Git commit')
+          else
+            commit_input()
+          end
         end
       end,
     })
