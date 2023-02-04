@@ -5,7 +5,10 @@ local log = utils.log
 _FORGIT_CFG = {
   debug = false, -- set to true to enable debug logging
   log_path = nil, -- set to a path to log to a file
-  fugitive = false,
+  fugitive = true, -- vim-fugitive is installed (why not)
+  flog = false,   -- vim-flog
+  gitsigns = true, -- gitsigns.nvim
+  git_fuzzy = false,
   git_alias = true,
   shell_mode = false, -- set to true if you running zsh and having trouble with the shell command
   diff = 'delta', -- diff-so-fancy, diff
@@ -13,7 +16,7 @@ _FORGIT_CFG = {
   show_result = 'quickfix', -- show cmd result in quickfix or notify
   height_ratio = 0.6, -- height ratio of floating window when split horizontally
   width_ratio = 0.6, -- width ratio of floating window when split vertically
-  cmds_list = {}
+  cmds_list = {},
 }
 
 local create_cmd = function(cmd, func, opt)
@@ -127,6 +130,12 @@ M.setup = function(cfg)
 
   require('forgit.commands').setup()
   require('forgit.list')
+
+  vim.api.nvim_create_user_command(
+    'Forgit',
+    'lua require("forgit.list").git_cmds()',
+    { force = false }
+  )
 end
 
 return M

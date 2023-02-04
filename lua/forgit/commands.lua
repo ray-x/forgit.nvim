@@ -8,10 +8,46 @@ local utils = require('forgit.utils')
 local log = utils.log
 local M = {}
 local cmds
+local function fugitive_installed()
+  vim.cmd('packadd vim-fugitive')
+  return vim.fn.exists('*fugitive#Command') > 0
+end
+
+local commit_input = function(args)
+  local cmdstr = ''
+  local need_input = true
+  if args then
+    for i, arg in ipairs(args) do
+      if arg == '-m' and args[i + 1] then
+        need_input = false
+      end
+      cmdstr = cmdstr .. ' ' .. arg
+    end
+  end
+  if not need_input then
+    return vim.cmd('silent !git commit ' .. cmdstr)
+  end
+  -- center pos
+  local r, c = require('guihua.location').center(1, 60)
+  require('guihua.input').input(
+    { prompt = 'Enter commit message: ', width = 40, relative = 'editor', row = r, col = c },
+    function(message)
+      if message == nil then
+        return
+      end
+      message = message:gsub('"', '\\"')
+      vim.cmd('silent !git commit ' .. ' -m "' .. message .. '"')
+    end
+  )
+end
+
 function M.setup()
   local git = 'git'
-  if _FORGIT_CFG.fugitive then
+
+  local use_fugitive = false
+  if _FORGIT_CFG.fugitive and fugitive_installed() then
     git = 'Git'
+    use_fugtive = true
   end
   cmds = {
     Gaa = git .. [[ add --all]],
@@ -27,19 +63,23 @@ function M.setup()
     Gce = git .. ' clean',
     GcB = git .. ' checkout -b',
     Gcef = git .. ' clean -fd',
-    Gcl = git .. ' clone',
-    Gcm = git .. ' commit -m',
+    Gcl = git .. ' clone {url}',
     Gdf = git .. ' diff --',
     Gdnw = git .. ' diff -w --',
     Gdw = git .. ' diff --word-diff',
     Gf = git .. ' fetch',
     Gfa = git .. ' fetch --all',
-    Gfr = git .. ' fetch; and git rebase',
-    Glg = git .. ' log --graph --max-count=5',
+    Gfr = {
+      cmd = git .. ' fetch; and git rebase',
+      fcmd = 'Gf | Gr',
+      close_on_exit = false,
+      qf = false,
+    }, -- Gf | Gr
+    Glg = git
+      .. " log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all",
     Gm = git .. ' merge',
     Gmff = git .. ' merge --ff',
     Gmnff = git .. ' merge --no-ff',
-    Gopen = git .. ' config --get remote.origin.url | xargs open',
     Gpl = git .. ' pull',
     Gplr = git .. ' pull --rebase',
     Gps = git .. ' push',
@@ -66,31 +106,33 @@ function M.setup()
     create_cmd(name, function(opts)
       local cmdstr = cmd
       if type(cmd) == 'table' then
-        if _FORGIT_CFG.fugitive then
+        if use_fugitive then
           cmdstr = cmd.fcmd
         else
           cmdstr = cmd.cmd
         end
       end
-      if opts and opts.fargs and #opts.fargs > 0 then
-        if cmdstr:find('commit') and not _FORGIT_CFG.fugitive then
-          cmdstr = '!' .. cmdstr
-          for _, arg in ipairs(opts.fargs) do
-            cmdstr = cmdstr .. ' ' .. arg
-          end
+
+      if cmdstr:find('commit') and not use_fugitive then
+        return commit_input(opts.fargs)
+      end
+      if vim.fn.empty(opts.fargs) == 0 then
+        for _, arg in ipairs(opts.fargs) do
+          cmdstr = cmdstr .. ' ' .. arg
           log(cmdstr)
-          return vim.cmd(cmdstr)
-        else
-          for _, arg in ipairs(opts.fargs) do
-            cmdstr = cmdstr .. ' ' .. arg
-          end
         end
       end
-      if _FORGIT_CFG.fugitive then
+      lprint(cmdstr)
+      if use_fugitive then
         vim.cmd(cmdstr)
       else
-        if type(cmd) == 'string' and (cmd:find('diff') or cmd:find('fzf') or cmd:find('show')) then
+        if
+          type(cmd) == 'string'
+          and (cmd:find('diff') or cmd:find('fzf') or cmd:find('log') or cmd:find('show'))
+        then
           term({ cmd = cmd, autoclose = false })
+        elseif type(cmd) == 'table' and cmd.qf == false then
+          term({ cmd = cmdstr, autoclose = false })
         else
           local lines = vim.fn.systemlist(vim.split(cmdstr, ' '))
           if _FORGIT_CFG.show_result == 'quickfix' then
@@ -133,10 +175,7 @@ function M.setup()
       on_exit = function(c, d, v)
         print(c, d, v)
         if d == 0 then
-          local m = vim.fn.input({ prompt = 'commit message:' })
-          if m ~= '' then
-            vim.cmd('!git commit -m "' .. m .. '"')
-          end
+          commit_input()
         end
       end,
     })
@@ -190,19 +229,21 @@ function M.setup()
   end, { nargs = '*' })
 
   M.cmdlst.Gbs = 'git branch --sort=-committerdate && checkout'
-  create_cmd('Gfz', function(opts)
-    local cmd = 'git fuzzy'
-    if opts and opts.fargs and #opts.fargs > 0 then
-      for _, arg in ipairs(opts.fargs) do
-        cmd = cmd .. ' ' .. arg
+  if _FORGIT_CFG.git_fuzzy == true then
+    create_cmd('Gfz', function(opts)
+      local cmd = 'git fuzzy'
+      if opts and opts.fargs and #opts.fargs > 0 then
+        for _, arg in ipairs(opts.fargs) do
+          cmd = cmd .. ' ' .. arg
+        end
       end
-    end
 
-    log(cmd)
-    cmd = vim.split(cmd, ' ')
-    term({ cmd = cmd, autoclose = true })
-  end, { nargs = '*', desc = 'git fuzzy' })
-  M.cmdlst.Gfz = 'git fuzzy'
+      log(cmd)
+      cmd = vim.split(cmd, ' ')
+      term({ cmd = cmd, autoclose = true })
+    end, { nargs = '*', desc = 'git fuzzy' })
+    M.cmdlst.Gfz = 'git fuzzy'
+  end
 
   create_cmd('Gcbc', function(opts)
     local cmd = 'git branch --sort=-committerdate'

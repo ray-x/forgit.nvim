@@ -62,6 +62,13 @@ local function binary_check()
     warn('delta is not installed')
   end
 
+  if vfn.exists('*fugitive#Command') > 0 then
+    info ('git fugitive installed')
+  else
+    no_err = false
+    warn('git fugitive is not installed')
+  end
+
   if no_err then
     ok('All binaries installed')
   else

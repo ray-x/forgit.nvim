@@ -7,6 +7,8 @@ This plug is a wrapper of interactive git commands
  * [git-fuzzy](htps://github.com/bigH/git-fuzzy)
  * 42 git commands alias
  * integrated with [diffview.nvim](https://github.com/sindrets/diffview.nvim)
+ * Wraps vim-fugitive commands
+ * Up to 150 git commands supported
 
 You need
 
@@ -16,6 +18,7 @@ You need
 - by default the plugin using [fd](https://github.com/sharkdp/fd) to list all files in the current folder, you can use
   `git ls_file`
 - a pager tool, e.g. `delta`
+- vim-fugitive (optional)
 
 https://user-images.githubusercontent.com/1681295/207864539-ec65b9c4-d8a0-4509-b13f-bd2192f742d9.mp4
 
@@ -32,7 +35,7 @@ Plug 'ray-x/forgit.nvim'
 require'forgit'.setup({
   debug = false, -- enable debug logging default path is ~/.cache/nvim/forgit.log
   diff = 'delta', -- you can use `diff`, `diff-so-fancy`
-  fugitive = false, -- git fugitive installed
+  fugitive = false, -- git fugitive installed?
   git_alias = true,  -- git command extensions see: Git command alias
   show_result = 'quickfix', -- show cmd result in quickfix or notify
 
@@ -120,11 +123,10 @@ require'forgit'.setup({
 |Gashp| git  stash pop |
 |Gashu| git  stash --include-untracked |
 |Gau| git  add -u |
-|Gc| git  commit |
+|Gc| git  commit, if -m not specify, will prompt a ui.input |
 |Gce| git  clean |
 |Gcef| git  clean -fd |
 |Gcl| git  clone |
-|Gcm| git  commit -m |
 |GcB| git checkout -b <branch> |
 |Gdf| git  diff -- |
 |Gdnw| git  diff -w -- |
