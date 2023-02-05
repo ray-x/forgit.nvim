@@ -131,11 +131,6 @@ M.setup = function(cfg)
   require('forgit.commands').setup()
   require('forgit.list')
 
-  vim.api.nvim_create_user_command(
-    'Forgit',
-    'lua require("forgit.list").git_cmds()',
-    { force = false }
-  )
 end
 
 return M

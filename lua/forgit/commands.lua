@@ -419,6 +419,12 @@ function M.setup()
     desc = 'git log | diff | fzf | xargs git difftool <hash> file name/all(!)',
   })
 
+  vim.api.nvim_create_user_command(
+    'Forgit',
+    'lua require("forgit.list").git_cmds()',
+    { nargs = '*' }
+  )
+
   M.cmdlst.Gldt = 'git log | diff | fzf | xargs git difftool <hash> file name/all(!)'
   M.cmdlst.Gs = 'git status'
   M.cmds = function()
