@@ -45,6 +45,22 @@ local function use_fugitive()
   return _FORGIT_CFG.fugitive and fugitive_installed()
 end
 
+local function diff(cmd, args)
+  local _, e = cmd:find('diff')
+  local remain = cmd:sub(e + 1)
+  if vim.fn.empty(_FORGIT_CFG.diff_cmd) == 0 then
+    -- if configed, use configed diff cmd
+    return vim.cmd(_FORGIT_CFG.diff_cmd .. ' ' .. remain .. table.concat(args, ' '))
+  end
+  if vim.fn.exists(':DiffviewOpen') > 0 then
+    vim.cmd('DiffviewOpen ' .. remain .. ' ' .. table.concat(args, ' '))
+  elseif use_fugitive() then
+    vim.cmd('Gvdiffsplit ' .. remain .. ' ' .. table.concat(args, ' '))
+  else
+    vim.cmd('silent !git diff ' .. remain .. ' ' .. table.concat(args, ' '))
+  end
+end
+
 function M.setup()
   local git = '' -- leading? delay the eval for lazyloading
 
@@ -104,15 +120,22 @@ function M.setup()
     M.cmdlst[name] = cmd
     create_cmd(name, function(opts)
       local cmdstr = cmd
+      local f = use_fugitive()
       if type(cmd) == 'table' then
-        if use_fugitive then
+        if f then
           cmdstr = cmd.fcmd
         else
           cmdstr = cmd.cmd
         end
       end
 
-      if use_fugitive() then
+      if
+        type(cmd) == 'string' and cmd:find('diff')
+        or (type(cmd) == 'table' and cmd.cmd:find('diff'))
+      then
+        return diff(cmdstr, opts.fargs)
+      end
+      if f then
         git = 'Git'
       else
         git = '!git'
@@ -128,15 +151,17 @@ function M.setup()
           log(cmdstr)
         end
       end
-      if use_fugitive then
+
+      if f then
         vim.cmd(cmdstr)
       else
         if
-          type(cmd) == 'string'
-          and (cmd:find('diff') or cmd:find('fzf') or cmd:find('log') or cmd:find('show'))
+          type(cmd) == 'string' and (cmd:find('fzf') or cmd:find('log') or cmd:find('show'))
+          or (type(cmd) == 'table' and cmd.qf == false)
         then
-          term({ cmd = cmd, autoclose = false })
-        elseif type(cmd) == 'table' and cmd.qf == false then
+          if cmdstr:sub(1, 1) == '!' then
+            cmdstr = cmdstr:sub(2)
+          end
           term({ cmd = cmdstr, autoclose = false })
         else
           local lines = vim.fn.systemlist(vim.split(cmdstr, ' '))
@@ -153,7 +178,19 @@ function M.setup()
 
       log(cmdstr)
       vim.notify(cmdstr)
-    end, { nargs = '*', desc = 'forgit command alias ' .. vim.inspect(cmd) })
+    end, {
+      nargs = '*',
+      desc = 'forgit command alias ' .. vim.inspect(cmd),
+      complete = function(a, l, p)
+        if vim.fn.exists('*fugitive#EditComplete') > 0 then
+          return vim.fn['fugitive#EditComplete'](a, l, p)
+        else
+          local files = vim.fn.systemlist('git diff --name-only')
+
+          return files
+        end
+      end,
+    })
   end
 
   -- other commmands
@@ -279,14 +316,14 @@ function M.setup()
     local sh = vim.o.shell
 
     local diff = ''
-    if _FORGIT_CFG.diff ~= '' then
-      if _FORGIT_CFG.diff == 'delta' then
+    if _FORGIT_CFG.diff_pager ~= '' then
+      if _FORGIT_CFG.diff_pager == 'delta' then
         diff = '|delta --side-by-side -w $FZF_PREVIEW_COLUMNS'
         if vim.fn.executable('delta') == 0 then
           diff = ''
         end
       else
-        diff = '|' .. _FORGIT_CFG.diff
+        diff = '|' .. _FORGIT_CFG.diff_pager
       end
     end
     local cmd = [[hash=$(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]'); git diff $hash --name-only|fzf -m --ansi  --preview-window "right,75%"  --preview "git diff $hash --color=always -- {-1}]]
@@ -382,14 +419,14 @@ function M.setup()
     local sh = vim.o.shell
 
     local diff = ''
-    if _FORGIT_CFG.diff ~= '' then
-      if _FORGIT_CFG.diff == 'delta' then
+    if _FORGIT_CFG.diff_pager ~= '' then
+      if _FORGIT_CFG.diff_pager == 'delta' then
         diff = '|delta --side-by-side -w $FZF_PREVIEW_COLUMNS'
         if vim.fn.executable('delta') == 0 then
           diff = ''
         end
       else
-        diff = '|' .. _FORGIT_CFG.diff
+        diff = '|' .. _FORGIT_CFG.diff_pager
       end
     end
 

@@ -11,7 +11,8 @@ _FORGIT_CFG = {
   git_fuzzy = false,
   git_alias = true,
   shell_mode = false, -- set to true if you running zsh and having trouble with the shell command
-  diff = 'delta', -- diff-so-fancy, diff
+  diff_pager = 'delta', -- diff-so-fancy, diff
+  diff_cmd = '', -- auto if not set
   vsplit = true, -- split forgit window the screen vertically
   show_result = 'quickfix', -- show cmd result in quickfix or notify
   height_ratio = 0.6, -- height ratio of floating window when split horizontally
@@ -33,14 +34,14 @@ local ga_bang = function(opts)
   log('ga_bang', opts)
 
   local diff = ''
-  if _FORGIT_CFG.diff ~= '' then
-    if _FORGIT_CFG.diff == 'delta' then
+  if _FORGIT_CFG.diff_pager_pager ~= '' then
+    if _FORGIT_CFG.diff_pager_pager == 'delta' then
       diff = '|delta --side-by-side -w $FZF_PREVIEW_COLUMNS'
       if vim.fn.executable('delta') == 0 then
         diff = ''
       end
     else
-      diff = '|' .. _FORGIT_CFG.diff
+      diff = '|' .. _FORGIT_CFG.diff_pager
     end
   end
 
@@ -81,6 +82,12 @@ local cmds = {
 
 M.cmds = cmds
 
+local function deprecate()
+  if _FORGIT_CFG.diff =='delta' then
+    utils.warn('diff option can only be "Gvdiffsplit" | "Gdiffsplit" | "fugitive_diff" | "diffview" now, please update your config')
+  end
+end
+
 M.setup = function(cfg)
   cfg = cfg or {}
   _FORGIT_CFG = vim.tbl_extend('force', _FORGIT_CFG, cfg)
@@ -88,8 +95,8 @@ M.setup = function(cfg)
   if not guihua_helper.is_installed('fzf') then
     print('please install fzf e.g. `brew install fzf')
   end
-  if not guihua_helper.is_installed(_FORGIT_CFG.diff) then
-    print('please install ' .. _FORGIT_CFG.diff .. ' e.g. `brew install' .. _FORGIT_CFG.diff .. '`')
+  if not guihua_helper.is_installed(_FORGIT_CFG.diff_pager) then
+    print('please install ' .. _FORGIT_CFG.diff_pager .. ' e.g. `brew install' .. _FORGIT_CFG.diff_pager .. '`')
   end
   if not guihua_helper.is_installed('git') then
     print('please install git ')
@@ -132,5 +139,6 @@ M.setup = function(cfg)
   require('forgit.list')
 
 end
+
 
 return M

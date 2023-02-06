@@ -8,7 +8,7 @@ This plug is a wrapper of interactive git commands
  * 42 git commands alias
  * integrated with [diffview.nvim](https://github.com/sindrets/diffview.nvim)
  * Wraps vim-fugitive commands
- * Up to 150 git commands supported
+ * Up to 100 git commands / alias supported
 
 You need
 
@@ -17,8 +17,8 @@ You need
 - install git-fuzzy (optional)
 - by default the plugin using [fd](https://github.com/sharkdp/fd) to list all files in the current folder, you can use
   `git ls_file`
-- a pager tool, e.g. `delta`
-- vim-fugitive (optional)
+- a diff pager, e.g. `delta`
+- vim-fugitive (highly recommended)
 
 https://user-images.githubusercontent.com/1681295/207864539-ec65b9c4-d8a0-4509-b13f-bd2192f742d9.mp4
 
@@ -34,7 +34,8 @@ Plug 'ray-x/forgit.nvim'
 ```lua
 require'forgit'.setup({
   debug = false, -- enable debug logging default path is ~/.cache/nvim/forgit.log
-  diff = 'delta', -- you can use `diff`, `diff-so-fancy`
+  diff_pager = 'delta', -- you can use `diff`, `diff-so-fancy`
+  diff_cmd = '', -- you can use `DiffviewOpen`, `Gvdiffsplit` or `!git diff`, auto if not set
   fugitive = false, -- git fugitive installed?
   git_alias = true,  -- git command extensions see: Git command alias
   show_result = 'quickfix', -- show cmd result in quickfix or notify
@@ -136,7 +137,7 @@ require'forgit'.setup({
 |Gf| git  fetch |
 |Gfa| git  fetch --all |
 |Gfr| git  fetch; and git rebase |
-|Glg| git  log --graph --max-count=5 |
+|Glg| git  log --graph --decorate |
 |Gm| git  merge |
 |Gmff| git  merge --ff |
 |Gmnff| git  merge --no-ff |
@@ -156,6 +157,14 @@ require'forgit'.setup({
 |Gt| git  tag |
 |Gtop| git  rev-parse --show-toplevel |
 |Gurl| git  config --get remote.origin.url |
+
+### 🍱 All in One
+`Forgit` allows you to list all commands in a list and you can fuzzy search and run any command you want.
+* vim-fugitive commands
+* forgit commands
+* forgit.nvim commands (acronym)
+* vim-flog commands
+* git-signs commands
 
 ### 📦 Optional dependencies
 
