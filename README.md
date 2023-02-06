@@ -128,7 +128,6 @@ require'forgit'.setup({
 |Gce| git  clean |
 |Gcef| git  clean -fd |
 |Gcl| git  clone |
-|GcB| git checkout -b <branch> |
 |Gdf| git  diff -- |
 |Gdnw| git  diff -w -- |
 |Gdw| git  diff --word-diff |
@@ -164,7 +163,7 @@ require'forgit'.setup({
 * forgit commands
 * forgit.nvim commands (acronym)
 * vim-flog commands
-* git-signs commands
+* gitsigns commands
 
 ### 📦 Optional dependencies
 

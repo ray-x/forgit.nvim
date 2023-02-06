@@ -76,7 +76,6 @@ function M.setup()
     Gau = git .. ' add -u',
     Gc = git .. ' commit',
     Gce = git .. ' clean',
-    GcB = git .. ' checkout -b',
     Gcef = git .. ' clean -fd',
     Gcl = git .. ' clone {url}',
     Gdf = git .. ' diff --',
@@ -138,7 +137,7 @@ function M.setup()
       if f then
         git = 'Git'
       else
-        git = '!git'
+        git = 'git'
       end
       cmdstr = git .. cmdstr -- here is the place to assign Git/!git
 
@@ -159,9 +158,6 @@ function M.setup()
           type(cmd) == 'string' and (cmd:find('fzf') or cmd:find('log') or cmd:find('show'))
           or (type(cmd) == 'table' and cmd.qf == false)
         then
-          if cmdstr:sub(1, 1) == '!' then
-            cmdstr = cmdstr:sub(2)
-          end
           term({ cmd = cmdstr, autoclose = false })
         else
           local lines = vim.fn.systemlist(vim.split(cmdstr, ' '))
