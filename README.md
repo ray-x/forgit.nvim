@@ -84,13 +84,17 @@ require'forgit'.setup({
 
 | Command               | Action                    |
 | :-------------------: | ------------------------- |
+|Gac   | Interactive `git add` generator, if file staged, run 'git commit' |
 |Gfz     | run `git fuzzy`, sub commands supports, e.g. `Gfz status` |
+|Gbc     | Interactive `git branch && checkout` generator |
 |Gdl     | Interactive `git diff --name-only & edit selected file` generator |
 |Gdl!    | Interactive `git diff master/main --name-only & edit selected file` generator |
-|Gcbc    | Interactive `git branch --sort=-committerdate && checkout` generator |
+|Gcbc    | Interactive `git branch --sort=-committerdate && checkout` generator, The preview is graphic view of git log|
 |Gdc     | Interactive `git log commit_hash & show diff against current` generator |
 |Gldt    | Interactive `git log commit_hash & difftool hash of selected filename` generator |
 |Gldt!   | Interactive `git log commit_hash & difftool hash of all files` generator |
+
+|Gbdo    | Interactive `git branch & DiffviewOpen selected branch with diffview.nvim` generator |
 |Gldo    | Interactive `git log commit_hash & DiffviewOpen current file with diffview.nvim` generator |
 |Gldo!   | Interactive `git log commit_hash & DiffviewOpen all diff files with diffview.nvim` generator |
 |Grlg   | Interactive `git rev-list & git grep` generator |

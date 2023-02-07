@@ -209,7 +209,8 @@ function M.setup()
   -- git diff master/main --name-only
 
   -- git add and commit
-  create_cmd('Gam', function(opts)
+  M.cmdlst.Gac = 'forgit ga & commit'
+  create_cmd('Gac', function(opts)
     local cmdstr = 'ga'
     if opts and opts.fargs and #opts.fargs > 0 then
       for _, arg in ipairs(opts.fargs) do
@@ -238,8 +239,7 @@ function M.setup()
     })
   end, { nargs = '*', desc = 'forgit ga & commit' })
 
-  M.cmdlst.Gam = 'forgit ga & commit'
-
+  M.cmdlst.Gdl = 'git diff --name-only && open'
   create_cmd('Gdl', function(opts)
     local master = vim.fn.system('git rev-parse --abbrev-ref master')
     if master:find('fatal') then
@@ -270,9 +270,8 @@ function M.setup()
     end, preview_cmd)
   end, { nargs = '*', bang = true, desc = 'forgit: git diff --name-only & open file' })
 
-  M.cmdlst.Gdl = 'git diff --name-only && open'
-
-  create_cmd('Gbs', function(opts)
+  M.cmdlst.Gbc = 'git branch --sort=-committerdate && checkout'
+  create_cmd('Gbc', function(opts)
     local cmd = 'git branch --sort=-committerdate'
     if opts and opts.fargs and #opts.fargs > 0 then
       for _, arg in ipairs(opts.fargs) do
@@ -281,7 +280,7 @@ function M.setup()
     end
     cmd = vim.split(cmd, ' ')
     local fzf = require('forgit.fzf').run
-    local preview_cmd = [[--preview-window "right,72%" --preview "echo {} | xargs git diff ]]
+    local preview_cmd = [[--preview-window "right,72%" --preview "echo {} | grep -v '^*' | xargs git diff ]]
       .. diff_prev()
       .. '"'
     fzf(cmd, function(line)
@@ -289,7 +288,6 @@ function M.setup()
     end, preview_cmd)
   end, { nargs = '*' })
 
-  M.cmdlst.Gbs = 'git branch --sort=-committerdate && checkout'
   if _FORGIT_CFG.git_fuzzy == true then
     create_cmd('Gfz', function(opts)
       local cmd = 'git fuzzy'
@@ -306,6 +304,7 @@ function M.setup()
     M.cmdlst.Gfz = 'git fuzzy'
   end
 
+  M.cmdlst.Gcbc = 'git branch --sort=-committerdate && checkout'
   create_cmd('Gcbc', function(opts)
     local cmd = 'git branch --sort=-committerdate'
     if opts and opts.fargs and #opts.fargs > 0 then
@@ -326,7 +325,6 @@ function M.setup()
     )
   end, { nargs = '*', desc = 'git branch | fzf | xargs -r git co ' })
 
-  M.cmdlst.Gcbc = 'git branch --sort=-committerdate && checkout'
   create_cmd('Gdc', function(opts)
     local sh = vim.o.shell
 
