@@ -93,6 +93,7 @@ require'forgit'.setup({
 |Gldt!   | Interactive `git log commit_hash & difftool hash of all files` generator |
 |Gldo    | Interactive `git log commit_hash & DiffviewOpen current file with diffview.nvim` generator |
 |Gldo!   | Interactive `git log commit_hash & DiffviewOpen all diff files with diffview.nvim` generator |
+|Grlg   | Interactive `git rev-list & git grep` generator |
 
 ### ⌨  Forgit Keybinds
 
@@ -148,6 +149,8 @@ require'forgit'.setup({
 |Gr| git  remote -v |
 |Grb| git  rebase |
 |Grbi| git  rebase -i |
+|Grbc| git  rebase --continue |
+|Grba| git  rebase --abort |
 |Grs| git  reset -- |
 |Grsh| git  reset --hard |
 |Grsl| git  reset HEAD~ |

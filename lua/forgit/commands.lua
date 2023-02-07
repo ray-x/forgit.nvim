@@ -101,6 +101,8 @@ function M.setup()
     Gr = git .. ' remote -v',
     Grb = git .. ' rebase',
     Grbi = git .. ' rebase -i',
+    Grbc = git .. ' rebase --continue',
+    Grba = git .. ' rebase --abort',
     Grs = git .. ' reset --',
     Grsh = git .. ' reset --hard',
     Grsl = git .. ' reset HEAD~',
@@ -410,6 +412,7 @@ function M.setup()
   end, { nargs = '*', bang = true, desc = 'select hash and diff file/(all!) with DiffviewOpen' })
 
   M.cmdlst.Gldo = 'select hash and diff file/(all!) with DiffviewOpen'
+
   -- git log diff tool
   create_cmd('Gldt', function(opts)
     local sh = vim.o.shell
@@ -451,6 +454,60 @@ function M.setup()
     bang = true,
     desc = 'git log | diff | fzf | xargs git difftool <hash> file name/all(!)',
   })
+  M.cmdlst.Gldt = 'git log | diff | fzf | xargs git difftool <hash> file name/all(!)'
+
+  local grep_input = function(cmdstr)
+    -- center pos
+    local r, c = require('guihua.location').center(1, 60)
+    require('guihua.input').input(
+      { prompt = 'grep message: ', width = 40, relative = 'editor', row = r, col = c },
+      function(message)
+        if message == nil then
+          return
+        end
+        message = message:gsub('"', '\\"')
+
+        cmdstr = string.format(cmdstr, message)
+
+        log(cmdstr)
+        local fzf = require('forgit.fzf').run
+        fzf(cmdstr, function(line)
+          local s, e = line:find('(%w+):([%w_%./\\]+)')
+          if s then
+            term({ cmd = 'git show ' .. line:sub(s, e) })
+          end
+        end)
+      end
+    )
+  end
+
+  M.cmdlst.Grlg = 'find git commit by git grep and show file on that version'
+  -- git log diff tool
+  create_cmd('Grlg', function(opts)
+    local cmd = [[git  rev-list --all | xargs git grep -F %s ]]
+    if opts and opts.fargs and #opts.fargs > 0 then
+      for _, arg in ipairs(opts.fargs) do
+        cmd = string.format(cmd, arg)
+        log(cmd)
+        -- local preview = [[--delimiter=:  --preview "echo  {1}:{2} | xargs git show"]]
+        local preview = [[--delimiter=:"]]
+        local fzf = require('forgit.fzf').run
+        return fzf(cmd, function(line)
+          log(line)
+          local s, e = line:find('(%w+):([%w_%./\\]+)')
+          if s then
+            term({ cmd = 'git show ' .. line:sub(s, e) })
+          end
+        end, preview)
+      end
+    else
+      grep_input(cmd)
+    end
+  end, {
+    nargs = '*',
+    bang = true,
+    desc = 'git rev-list | xargs git grep keywoard',
+  })
 
   vim.api.nvim_create_user_command(
     'Forgit',
@@ -458,7 +515,6 @@ function M.setup()
     { nargs = '*' }
   )
 
-  M.cmdlst.Gldt = 'git log | diff | fzf | xargs git difftool <hash> file name/all(!)'
   M.cmdlst.Gs = 'git status'
   M.cmds = function()
     return M.cmdlst
