@@ -9,22 +9,31 @@ function utils.sep()
   return '/'
 end
 
-function utils.load_plugin(name, modulename)
+
+function utils.load_plugin(name)
+  local has, loader = pcall(require, 'packer')
+  if has and packer_plugins ~= nil then
+    pcall(loader.loader, name)
+  else
+    local lz
+    has, lz = pcall(require, 'lazy')
+    if has and lz then
+      -- lazy installed
+      pcall(lz.loader, name)
+    else
+      vim.cmd('packadd ' .. name) -- load with default
+    end
+  end
+end
+
+function utils.load_module(name, modulename)
   assert(name ~= nil, 'plugin should not empty')
   modulename = modulename or name
   local has, plugin = pcall(require, modulename)
   if has then
     return plugin
   end
-  if packer_plugins ~= nil then
-    -- packer installed
-    local loader = require('packer').loader
-    if not packer_plugins[name] or not packer_plugins[name].loaded then
-      loader(name)
-    end
-  else
-    vim.cmd('packadd ' .. name) -- load with default
-  end
+  utils.load_plugin(name)
 
   has, plugin = pcall(require, modulename)
   if not has then

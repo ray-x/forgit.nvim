@@ -6,7 +6,7 @@ _FORGIT_CFG = {
   debug = false, -- set to true to enable debug logging
   log_path = nil, -- set to a path to log to a file
   fugitive = true, -- vim-fugitive is installed (why not)
-  flog = false,   -- vim-flog
+  flog = false, -- vim-flog
   gitsigns = true, -- gitsigns.nvim
   git_fuzzy = false,
   git_alias = true,
@@ -24,7 +24,7 @@ local create_cmd = function(cmd, func, opt)
   opt = vim.tbl_extend('force', { desc = 'forgit ' .. cmd }, opt or {})
   vim.api.nvim_create_user_command(cmd, func, opt)
 end
-local guihua_helper = utils.load_plugin('guihua.lua', 'guihua.helper')
+local guihua_helper = utils.load_module('guihua.lua', 'guihua.helper')
 if not guihua_helper then
   utils.warn('guihua not installed, please install ray-x/guihua.lua for GUI functions')
 end
@@ -83,8 +83,10 @@ local cmds = {
 M.cmds = cmds
 
 local function deprecate()
-  if _FORGIT_CFG.diff =='delta' then
-    utils.warn('diff option can only be "Gvdiffsplit" | "Gdiffsplit" | "fugitive_diff" | "diffview" now, please update your config')
+  if _FORGIT_CFG.diff == 'delta' then
+    utils.warn(
+      'diff option can only be "Gvdiffsplit" | "Gdiffsplit" | "fugitive_diff" | "diffview" now, please update your config'
+    )
   end
 end
 
@@ -96,11 +98,18 @@ M.setup = function(cfg)
     print('please install fzf e.g. `brew install fzf')
   end
   if not guihua_helper.is_installed(_FORGIT_CFG.diff_pager) then
-    print('please install ' .. _FORGIT_CFG.diff_pager .. ' e.g. `brew install' .. _FORGIT_CFG.diff_pager .. '`')
+    print(
+      'please install '
+        .. _FORGIT_CFG.diff_pager
+        .. ' e.g. `brew install'
+        .. _FORGIT_CFG.diff_pager
+        .. '`'
+    )
   end
   if not guihua_helper.is_installed('git') then
     print('please install git ')
   end
+  require('forgit.utils').load_plugin('vim-fugitive')
   for _, cmd_info in ipairs(cmds) do
     -- create_cmd(cmd, 'lua require("forgit").' .. cmd:lower() .. '()')
     local cmd = cmd_info[1]
@@ -132,13 +141,23 @@ M.setup = function(cfg)
       local term = require('forgit.term').run
       log(cmdstr)
       term({ cmd = cmdstr, autoclose = autoclose })
-    end, { nargs = '*', bang = true, desc = 'forgit ' .. cmd_details })
+    end, {
+      nargs = '*',
+      bang = true,
+      desc = 'forgit ' .. cmd_details,
+      complete = function(a, l, p)
+        if vim.fn.exists('*fugitive#EditComplete') > 0 then
+          return vim.fn['fugitive#EditComplete'](a, l, p)
+        else
+          local files = vim.fn.systemlist('git diff --name-only')
+          return files
+        end
+      end,
+    })
   end
 
   require('forgit.commands').setup()
   require('forgit.list')
-
 end
-
 
 return M

@@ -84,7 +84,7 @@ local function plugin_check()
   }
   local any_warn = false
   for _, plugin in ipairs(plugins) do
-    local pi = util.load_plugin(plugin)
+    local pi = util.load_module(plugin)
     if pi ~= nil then
       ok(string.format('%s: plugin is installed', plugin))
     else

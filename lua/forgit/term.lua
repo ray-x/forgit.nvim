@@ -1,6 +1,6 @@
 local utils = require('forgit.utils')
 local api = vim.api
-local guihua_term = utils.load_plugin('guihua.lua', 'guihua.floating')
+local guihua_term = utils.load_module('guihua.lua', 'guihua.floating')
 if not guihua_term then
   utils.warn('guihua not installed, please install ray-x/guihua.lua for GUI functions')
 end
