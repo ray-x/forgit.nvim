@@ -109,7 +109,9 @@ M.setup = function(cfg)
   if not guihua_helper.is_installed('git') then
     print('please install git ')
   end
-  require('forgit.utils').load_plugin('vim-fugitive')
+  if _FORGIT_CFG.fugitive then
+    require('forgit.utils').load_plugin('vim-fugitive')
+  end
   for _, cmd_info in ipairs(cmds) do
     -- create_cmd(cmd, 'lua require("forgit").' .. cmd:lower() .. '()')
     local cmd = cmd_info[1]
