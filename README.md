@@ -129,6 +129,11 @@ require'forgit'.setup({
 |Gashp| git  stash pop |
 |Gashu| git  stash --include-untracked |
 |Gau| git  add -u |
+|gbs | git bisect |
+|gbsb| git bisect bad |
+|gbsg| git bisect good |
+|gbsr| git bisect reset |
+|gbss| git bisect start |
 |Gc| git  commit, if -m not specify, will prompt a ui.input |
 |Gce| git  clean |
 |Gcef| git  clean -fd |
