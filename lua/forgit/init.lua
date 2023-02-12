@@ -6,7 +6,7 @@ _FORGIT_CFG = {
   debug = false, -- set to true to enable debug logging
   log_path = nil, -- set to a path to log to a file
   fugitive = true, -- vim-fugitive is installed (why not)
-  abbreviate = true, -- abvreviate some of the commands e.g. gps -> Gps
+  abbreviate = false, -- abvreviate some of the commands e.g. gps -> Gps
   flog = false, -- vim-flog
   gitsigns = true, -- gitsigns.nvim
   git_fuzzy = false,
@@ -46,7 +46,7 @@ local ga_bang = function(opts)
     end
   end
 
-  local cmd = '$(git diff --name-only --cached | fzf -m --preview="git diff --cached $(echo {})'
+  local cmd = '$(git diff --name-only --cached | fzf --prompt "ga>" -m --preview="git diff --cached $(echo {})'
     .. diff
     .. '");   echo $files | xargs -r git restore --staged '
   if sh:find('fish') then

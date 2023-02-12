@@ -125,7 +125,7 @@ function M.setup()
   for name, cmd in pairs(cmds) do
     M.cmdlst[name] = cmd
 
-    if _FORGIT_CFG.abbreviate == true and name ~= 'Gfr' then
+    if _FORGIT_CFG.abbreviate == true and name ~= 'Gfr' and #name > 2 then
       local cmdstr = cmd
       local f = _FORGIT_CFG.fugitive
       local n = name:lower()
