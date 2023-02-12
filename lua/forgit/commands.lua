@@ -74,11 +74,11 @@ function M.setup()
     Gashp = git .. ' stash pop',
     Gashu = git .. ' stash --include-untracked',
     Gau = git .. ' add -u',
-    Gbs = git .. 'bisect',
-    Gbsb = git .. 'bisect bad',
-    Gbsg = git .. 'bisect good',
-    Gbsr = git .. 'bisect reset',
-    Gbss = git .. 'bisect start',
+    Gbs = git .. ' bisect',
+    Gbsb = git .. ' bisect bad',
+    Gbsg = git .. ' bisect good',
+    Gbsr = git .. ' bisect reset',
+    Gbss = git .. ' bisect start',
     Gc = git .. ' commit',
     Gce = git .. ' clean',
     Gcef = git .. ' clean -fd',
@@ -124,6 +124,26 @@ function M.setup()
 
   for name, cmd in pairs(cmds) do
     M.cmdlst[name] = cmd
+
+    if _FORGIT_CFG.abbreviate == true and name ~= 'Gfr' then
+      local cmdstr = cmd
+      local f = _FORGIT_CFG.fugitive
+      local n = name:lower()
+      local g = 'Git'
+      if not f then
+        g = '!git'
+      end
+
+      if type(cmd) == 'table' then
+        if f then
+          cmdstr = cmd.fcmd
+        else
+          cmdstr = cmd.cmd
+        end
+      end
+      log('ab ' .. n .. ' ' .. g .. ' ' .. cmdstr)
+      vim.cmd('ab ' .. n .. ' ' .. g .. ' ' .. cmdstr)
+    end
     create_cmd(name, function(opts)
       local cmdstr = cmd
       local f = use_fugitive()

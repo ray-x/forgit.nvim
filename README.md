@@ -37,6 +37,7 @@ require'forgit'.setup({
   diff_pager = 'delta', -- you can use `diff`, `diff-so-fancy`
   diff_cmd = '', -- you can use `DiffviewOpen`, `Gvdiffsplit` or `!git diff`, auto if not set
   fugitive = false, -- git fugitive installed?
+  abbreviate = true, -- abvreviate some of the commands e.g. gps -> git push
   git_alias = true,  -- git command extensions see: Git command alias
   show_result = 'quickfix', -- show cmd result in quickfix or notify
 
