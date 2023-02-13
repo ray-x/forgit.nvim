@@ -3,7 +3,7 @@ local create_cmd = function(cmd, func, opt)
   opt = vim.tbl_extend('force', { desc = 'git command alias ' .. cmd }, opt or {})
   vim.api.nvim_create_user_command(cmd, func, opt)
 end
-_FORGIT_CFG = _FORGIT_CFG or {} -- supress warnings
+_FORGIT_CFG = _FORGIT_CFG or {} -- suppress warnings
 local utils = require('forgit.utils')
 local log = utils.log
 local M = {}
@@ -264,8 +264,8 @@ function M.setup()
     })
   end, { nargs = '*', desc = 'forgit ga & commit' })
 
-  M.cmdlst.Gdl = 'git diff --name-only && open'
-  create_cmd('Gdl', function(opts)
+  M.cmdlst.Gde = 'git diff --name-only && edit with nvim'
+  create_cmd('Gde', function(opts)
     local master = vim.fn.system('git rev-parse --abbrev-ref master')
     if master:find('fatal') then
       master = 'main'
@@ -294,6 +294,44 @@ function M.setup()
       vim.cmd('edit ' .. line)
     end, preview_cmd)
   end, { nargs = '*', bang = true, desc = 'forgit: git diff --name-only & open file' })
+
+  M.cmdlst.Gdd = 'git diff --name-only && open selected file with Diffview '
+  create_cmd('Gdd', function(opts)
+    local master = vim.fn.system('git rev-parse --abbrev-ref master')
+    if master:find('fatal') then
+      master = 'main'
+    else
+      master = 'master'
+    end
+
+    local cmd = 'git diff --name-only'
+    if opts.bang then
+      cmd = string.format('git diff %s --name-only', master)
+    end
+
+    if opts and opts.fargs and #opts.fargs > 0 then
+      for _, arg in ipairs(opts.fargs) do
+        cmd = cmd .. ' ' .. arg
+      end
+    end
+
+    log(cmd)
+    cmd = vim.split(cmd, ' ')
+    print(vim.inspect(cmd))
+
+    local preview_cmd = [[--preview-window "right,70%" --preview "git diff ]] .. diff_prev() .. '"'
+    local fzf = require('forgit.fzf').run
+    fzf(cmd, function(line)
+      log('DiffviewOpen ' .. master .. ' -- ' .. line)
+
+      if vim.fn.exists(':DiffviewOpen') > 0 then
+        vim.cmd('DiffviewOpen ' .. master .. ' -- ' .. line .. ' | DiffviewToggleFiles')
+      else
+        vim.cmd('e ' .. line) -- open fil
+        vim.cmd('Gvdiffsplit ' .. master)
+      end
+    end, preview_cmd)
+  end, { nargs = '*', bang = true, desc = 'forgit: git diff --name-only & diff file' })
 
   M.cmdlst.Gbc = 'git branch --sort=-committerdate && checkout'
   create_cmd('Gbc', function(opts)
@@ -356,12 +394,12 @@ function M.setup()
     local cmd = [[hash=$(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]'); git diff $hash --name-only|fzf -m --ansi  --preview-window "right,75%"  --preview "git diff $hash --color=always -- {-1}]]
       .. diff_prev()
       .. '"'
-      .. '|xargs -r git difftool $hash'
+      .. '|xargs -r git checkout  $hash'
     if sh:find('fish') then
       cmd = [[set hash $(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]') ; git diff $hash --name-only|fzf -m --ansi  --preview-window "right,75%"  --preview "git diff $hash --color=always -- {-1}]]
         .. diff_prev()
         .. '"'
-        .. '|xargs -r git difftool $hash'
+        .. '|xargs -r git checkout $hash'
     end
     if opts and opts.fargs and #opts.fargs > 0 then
       for _, arg in ipairs(opts.fargs) do
@@ -371,9 +409,8 @@ function M.setup()
 
     log(cmd)
     term({ cmd = cmd, autoclose = true })
-  end, { nargs = '*', desc = 'git log | fzf | xargs git difftool' })
-
-  M.cmdlst.Gdc = 'git log | fzf | xargs git difftool'
+  end, { nargs = '*', desc = 'git log | fzf | xargs git checkout' })
+  M.cmdlst.Gdc = 'git log | fzf | xargs git checkout'
 
   create_cmd('Gbdo', function(opts)
     local cmd = [[git branch]]
@@ -397,9 +434,8 @@ function M.setup()
           -- no need to compare current branch
           return
         end
-        local cmdstr = 'DiffviewOpen ' .. line
-        log(cmdstr)
-        vim.cmd(cmdstr)
+
+        diff('!git diff ' .. line)
       end,
       [[--ansi --preview "git log --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' {1}"]]
     )
@@ -431,12 +467,11 @@ function M.setup()
       local b, e = hex:match_str(line)
       if b and e then
         local hash = line:sub(b, e)
-        local cmdstr = 'DiffviewOpen ' .. hash
+        local cmdstr = '!git diff ' .. hash
         if not opts.bang then
           cmdstr = cmdstr .. ' -- ' .. vim.fn.expand('%')
         end
-        log(cmdstr)
-        vim.cmd(cmdstr)
+        diff(cmdstr)
       end
     end, preview_cmd)
   end, { nargs = '*', bang = true, desc = 'select hash and diff file/(all!) with DiffviewOpen' })
@@ -447,10 +482,10 @@ function M.setup()
   create_cmd('Gldt', function(opts)
     local sh = vim.o.shell
 
-    local diff = diff_prev()
+    local diffp = diff_prev()
 
     local cmd = [[$(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]'); git diff $hash --name-only|fzf -m --ansi --preview-window "right,72%" --preview "git diff $hash --color=always -- {-1}]]
-      .. diff
+      .. diffp
       .. '"'
       .. '| xargs git difftool $hash'
     if sh:find('fish') then

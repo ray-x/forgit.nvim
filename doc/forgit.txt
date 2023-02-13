@@ -103,8 +103,8 @@ USAGE                                                               *forgit-usag
 |Gac   | Interactive `git add` generator, if file staged, run 'git commit' |
 |Gfz     | run `git fuzzy`, sub commands supports, e.g. `Gfz status` |
 |Gbc     | Interactive `git branch && checkout` generator |
-|Gdl     | Interactive `git diff --name-only & edit selected file` generator |
-|Gdl!    | Interactive `git diff master/main --name-only & edit selected file` generator |
+|Gde     | Interactive `git diff --name-only & edit selected file` generator |
+|Gde!    | Interactive `git diff master/main --name-only & edit selected file` generator |
 |Gcbc    | Interactive `git branch --sort=-committerdate && checkout` generator, The preview is graphic view of git log|
 |Gdc     | Interactive `git log commit_hash & show diff against current` generator |
 |Gldt    | Interactive `git log commit_hash & difftool hash of selected filename` generator |
