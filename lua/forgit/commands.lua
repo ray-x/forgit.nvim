@@ -230,7 +230,7 @@ function M.setup()
     return diff_str
   end
 
-  -- other commmands
+  -- other commands
   -- git diff master/main --name-only
 
   -- git add and commit
