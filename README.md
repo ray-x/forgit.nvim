@@ -94,7 +94,6 @@ require'forgit'.setup({
 |Gdc     | Interactive `git log commit_hash & show diff against current` generator |
 |Gldt    | Interactive `git log commit_hash & difftool hash of selected filename` generator |
 |Gldt!   | Interactive `git log commit_hash & difftool hash of all files` generator |
-
 |Gbdo    | Interactive `git branch & DiffviewOpen selected branch with diffview.nvim` generator |
 |Gldo    | Interactive `git log commit_hash & DiffviewOpen current file with diffview.nvim` generator |
 |Gldo!   | Interactive `git log commit_hash & DiffviewOpen all diff files with diffview.nvim` generator |
