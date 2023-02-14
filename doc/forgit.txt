@@ -3,7 +3,7 @@ forgit.txt
 ================================================================================
 CONTENTS                                                         *forgit-contents*
 
-1. forgit.nvim................................................|forgit-forgit.nvim|
+1. [WIP] forgit.nvim....................................|forgit-[wip]_forgit.nvim|
 2. install........................................................|forgit-install|
 3. Configure....................................................|forgit-configure|
 4. Screenshot..................................................|forgit-screenshot|
@@ -14,7 +14,7 @@ CONTENTS                                                         *forgit-content
         5.4. 📦 Optional dependencies........|forgit-📦_optional_dependencies|
 
 ================================================================================
-FORGIT.NVIM                                                   *forgit-forgit.nvim*
+[WIP] FORGIT.NVIM                                       *forgit-[wip]_forgit.nvim*
 
 Interactive git commands with fzf.
 
@@ -53,6 +53,7 @@ CONFIGURE                                                       *forgit-configur
       diff_pager = 'delta', -- you can use `diff`, `diff-so-fancy`
       diff_cmd = '', -- you can use `DiffviewOpen`, `Gvdiffsplit` or `!git diff`, auto if not set
       fugitive = false, -- git fugitive installed?
+      abbreviate = false, -- abvreviate some of the commands e.g. gps -> git push
       git_alias = true,  -- git command extensions see: Git command alias
       show_result = 'quickfix', -- show cmd result in quickfix or notify
       shell_mode = true, -- set to true if you using zsh/bash and can not run forgit commands
@@ -105,15 +106,16 @@ USAGE                                                               *forgit-usag
 |Gbc     | Interactive `git branch && checkout` generator |
 |Gde     | Interactive `git diff --name-only & edit selected file` generator |
 |Gde!    | Interactive `git diff master/main --name-only & edit selected file` generator |
-|Gcbc    | Interactive `git branch --sort=-committerdate && checkout` generator, The preview is graphic view of git log|
-|Gdc     | Interactive `git log commit_hash & show diff against current` generator |
+|Gdd     | Interactive `git diff --name-only & OpendiffView selected file` generator |
+|Gdd!    | Interactive `git diff master/main --name-only & DiffviewOpen` generator |
+|Gbc     | Interactive `git branch --sort=-committerdate && checkout` generator, The preview is graphic view of git log|
+|Gdc     | Interactive `git log commit_hash & show diff against current & checkout` generator |
 |Gldt    | Interactive `git log commit_hash & difftool hash of selected filename` generator |
 |Gldt!   | Interactive `git log commit_hash & difftool hash of all files` generator |
-
 |Gbdo    | Interactive `git branch & DiffviewOpen selected branch with diffview.nvim` generator |
 |Gldo    | Interactive `git log commit_hash & DiffviewOpen current file with diffview.nvim` generator |
 |Gldo!   | Interactive `git log commit_hash & DiffviewOpen all diff files with diffview.nvim` generator |
-|Grlg   | Interactive `git rev-list & git grep` generator |
+|Grlg    | Interactive `git rev-list & git grep` generator |
 
 ⌨  FORGIT KEYBINDS                                 *forgit-⌨__forgit_keybinds*
 
@@ -143,6 +145,11 @@ USAGE                                                               *forgit-usag
 |Gashp| git  stash pop |
 |Gashu| git  stash --include-untracked |
 |Gau| git  add -u |
+|gbs | git bisect |
+|gbsb| git bisect bad |
+|gbsg| git bisect good |
+|gbsr| git bisect reset |
+|gbss| git bisect start |
 |Gc| git  commit, if -m not specify, will prompt a ui.input |
 |Gce| git  clean |
 |Gcef| git  clean -fd |
