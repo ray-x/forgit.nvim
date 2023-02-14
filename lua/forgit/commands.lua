@@ -185,7 +185,7 @@ function M.setup()
           type(cmd) == 'string' and (cmd:find('fzf') or cmd:find('log') or cmd:find('show'))
           or (type(cmd) == 'table' and cmd.qf == false)
         then
-          term({ cmd = cmdstr, autoclose = false })
+          term({ cmd = cmdstr, autoclose = false, title = cmdstr })
         else
           local lines = vim.fn.systemlist(vim.split(cmdstr, ' '))
           if _FORGIT_CFG.show_result == 'quickfix' then
@@ -250,6 +250,7 @@ function M.setup()
     log(cmdstr)
     term({
       cmd = cmdstr,
+      title = M.cmdlst.Gac,
       autoclose = true,
       on_exit = function(c, d, v)
         print(c, d, v)
@@ -288,7 +289,7 @@ function M.setup()
     cmd = vim.split(cmd, ' ')
     print(vim.inspect(cmd))
 
-    local preview_cmd = [[--preview-window "right,70%" --preview "git diff ]] .. diff_prev() .. '"'
+    local preview_cmd = [[--prompt "select name to edit >" --preview-window "right,70%" --preview "git diff ]] .. diff_prev() .. '"'
     local fzf = require('forgit.fzf').run
     fzf(cmd, function(line)
       vim.cmd('edit ' .. line)
@@ -319,7 +320,7 @@ function M.setup()
     cmd = vim.split(cmd, ' ')
     print(vim.inspect(cmd))
 
-    local preview_cmd = [[--preview-window "right,70%" --preview "git diff ]] .. diff_prev() .. '"'
+    local preview_cmd = [[--prompt "select name & diff >"  --preview-window "right,70%" --preview "git diff ]] .. diff_prev() .. '"'
     local fzf = require('forgit.fzf').run
     fzf(cmd, function(line)
       log('DiffviewOpen ' .. master .. ' -- ' .. line)
@@ -343,7 +344,7 @@ function M.setup()
     end
     cmd = vim.split(cmd, ' ')
     local fzf = require('forgit.fzf').run
-    local preview_cmd = [[--preview-window "right,72%" --preview "echo {} | grep -v '^*' | xargs git diff ]]
+    local preview_cmd = [[--prompt "select branch & checkout >" --preview-window "right,72%" --preview "echo {} | grep -v '^*' | xargs git diff ]]
       .. diff_prev()
       .. '"'
     fzf(cmd, function(line)
@@ -362,31 +363,31 @@ function M.setup()
 
       log(cmd)
       cmd = vim.split(cmd, ' ')
-      term({ cmd = cmd, autoclose = true })
+      term({ cmd = cmd, autoclose = true, title = 'git fuzzy' })
     end, { nargs = '*', desc = 'git fuzzy' })
     M.cmdlst.Gfz = 'git fuzzy'
   end
 
-  M.cmdlst.Gcbc = 'git branch --sort=-committerdate && checkout'
-  create_cmd('Gcbc', function(opts)
-    local cmd = 'git branch --sort=-committerdate'
-    if opts and opts.fargs and #opts.fargs > 0 then
-      for _, arg in ipairs(opts.fargs) do
-        cmd = cmd .. ' ' .. arg
-      end
-    end
-
-    log(cmd)
-    cmd = vim.split(cmd, ' ')
-    local fzf = require('forgit.fzf').run
-    fzf(
-      cmd,
-      function(line)
-        print(vim.fn.system('git checkout ' .. line))
-      end,
-      [[--ansi --preview "git log --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' {1}"]]
-    )
-  end, { nargs = '*', desc = 'git branch | fzf | xargs -r git co ' })
+  -- M.cmdlst.Gcbc = 'git branch --sort=-committerdate && checkout'
+  -- create_cmd('Gcbc', function(opts)
+  --   local cmd = 'git branch --sort=-committerdate'
+  --   if opts and opts.fargs and #opts.fargs > 0 then
+  --     for _, arg in ipairs(opts.fargs) do
+  --       cmd = cmd .. ' ' .. arg
+  --     end
+  --   end
+  --
+  --   log(cmd)
+  --   cmd = vim.split(cmd, ' ')
+  --   local fzf = require('forgit.fzf').run
+  --   fzf(
+  --     cmd,
+  --     function(line)
+  --       print(vim.fn.system('git checkout ' .. line))
+  --     end,
+  --     [[--prompt "select name & checkout >"  --ansi --preview "git log --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' {1}"]]
+  --   )
+  -- end, { nargs = '*', desc = 'git branch | fzf | xargs -r git co ' })
 
   create_cmd('Gdc', function(opts)
     local sh = vim.o.shell
@@ -408,7 +409,7 @@ function M.setup()
     end
 
     log(cmd)
-    term({ cmd = cmd, autoclose = true })
+    term({ cmd = cmd, autoclose = true, title = 'git log & checkout selected' })
   end, { nargs = '*', desc = 'git log | fzf | xargs git checkout' })
   M.cmdlst.Gdc = 'git log | fzf | xargs git checkout'
 
@@ -437,18 +438,20 @@ function M.setup()
 
         diff('!git diff ' .. line)
       end,
-      [[--ansi --preview "git log --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' {1}"]]
+      [[--prompt "select branch to diff >" --ansi --preview "git log --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' {1}"]]
     )
   end, { nargs = '*', bang = true, desc = 'select hash and diff file/(all!) with DiffviewOpen' })
 
   M.cmdlst.Gbdo = 'select hash and diff file/(all!) with DiffviewOpen'
+
+  M.cmdlst.Gldo = 'select hash and diff file/(all!) with DiffviewOpen'
   create_cmd('Gldo', function(opts)
     local cmd = [[git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset']]
     if not opts.bang then
       cmd = cmd .. ' ' .. vim.fn.expand('%')
     end
 
-    local preview_cmd = [[--preview-window "right,62%" --preview "echo {} | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]' | xargs -I% git show --color=always -U$_forgit_preview_context % -- $(sed -nE 's/.* -- (.*)/\1/p' <<< "$*") ]]
+    local preview_cmd = [[--prompt "select hash >" --preview-window "right,62%" --preview "echo {} | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]' | xargs -I% git show --color=always -U$_forgit_preview_context % -- $(sed -nE 's/.* -- (.*)/\1/p' <<< "$*") ]]
       .. diff_prev()
       .. '"'
 
@@ -476,9 +479,10 @@ function M.setup()
     end, preview_cmd)
   end, { nargs = '*', bang = true, desc = 'select hash and diff file/(all!) with DiffviewOpen' })
 
-  M.cmdlst.Gldo = 'select hash and diff file/(all!) with DiffviewOpen'
 
   -- git log diff tool
+
+  M.cmdlst.Gldt = 'git log | diff | fzf | xargs git difftool <hash> file name/all(!)'
   create_cmd('Gldt', function(opts)
     local sh = vim.o.shell
 
@@ -503,13 +507,12 @@ function M.setup()
     end
 
     log(cmd)
-    term({ cmd = cmd, autoclose = true })
+    term({ cmd = cmd, autoclose = true, title = M.cmdlst.Gldt })
   end, {
     nargs = '*',
     bang = true,
     desc = 'git log | diff | fzf | xargs git difftool <hash> file name/all(!)',
   })
-  M.cmdlst.Gldt = 'git log | diff | fzf | xargs git difftool <hash> file name/all(!)'
 
   local grep_input = function(cmdstr)
     -- center pos
@@ -529,7 +532,7 @@ function M.setup()
         fzf(cmdstr, function(line)
           local s, e = line:find('(%w+):([%w_%./\\]+)')
           if s then
-            term({ cmd = 'git show ' .. line:sub(s, e) })
+            term({ cmd = 'git show ' .. line:sub(s, e), title = M.cmdlst.Gldt })
           end
         end)
       end
@@ -551,7 +554,7 @@ function M.setup()
           log(line)
           local s, e = line:find('(%w+):([%w_%./\\]+)')
           if s then
-            term({ cmd = 'git show ' .. line:sub(s, e) })
+            term({ cmd = 'git show ' .. line:sub(s, e), title = cmd })
           end
         end, preview)
       end

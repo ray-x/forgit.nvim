@@ -30,6 +30,7 @@ local term = function(opts)
   opts.vsplit = _FORGIT_CFG.vsplit
   opts.height_ratio = _FORGIT_CFG.height_ratio
   opts.width_ratio = _FORGIT_CFG.width_ratio
+  opts.title = opts.title or opts.cmd
   opts.closer = function(c, d)
     if d ~= 0 then
       local msg = string.format("Error: %s jobid: %s exit code: %s" ,opts.cmd , vim.inspect(c) , vim.inspect(d))

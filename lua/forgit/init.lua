@@ -143,7 +143,7 @@ M.setup = function(cfg)
       end
       local term = require('forgit.term').run
       log(cmdstr)
-      term({ cmd = cmdstr, autoclose = autoclose })
+      term({ cmd = cmdstr, autoclose = autoclose, title = cmd_details })
     end, {
       nargs = '*',
       bang = true,

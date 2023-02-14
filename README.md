@@ -92,7 +92,7 @@ require'forgit'.setup({
 |Gde!    | Interactive `git diff master/main --name-only & edit selected file` generator |
 |Gdd     | Interactive `git diff --name-only & OpendiffView selected file` generator |
 |Gdd!    | Interactive `git diff master/main --name-only & DiffviewOpen` generator |
-|Gcbc    | Interactive `git branch --sort=-committerdate && checkout` generator, The preview is graphic view of git log|
+|Gbc     | Interactive `git branch --sort=-committerdate && checkout` generator, The preview is graphic view of git log|
 |Gdc     | Interactive `git log commit_hash & show diff against current & checkout` generator |
 |Gldt    | Interactive `git log commit_hash & difftool hash of selected filename` generator |
 |Gldt!   | Interactive `git log commit_hash & difftool hash of all files` generator |

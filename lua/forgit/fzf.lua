@@ -1,6 +1,6 @@
 local M = {}
 local vfn = vim.fn
-M.run = function(cmd, sink, opts)
+M.run = function(cmd, sink, opts, title)
   local wrap_opts = {
     source = vim.fn.systemlist(cmd),
     sink = sink,
