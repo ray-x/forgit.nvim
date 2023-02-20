@@ -171,7 +171,7 @@ require'forgit'.setup({
 |Gtop| git  rev-parse --show-toplevel |
 |Gurl| git  config --get remote.origin.url |
 
-### 🍱 All in One
+### 🍱 All in One: Forgit command
 
 ![forgit](https://user-images.githubusercontent.com/1681295/220201398-3a46d506-e79b-4ac6-93d0-5a900683d5c8.jpg)
 
