@@ -172,7 +172,12 @@ require'forgit'.setup({
 |Gurl| git  config --get remote.origin.url |
 
 ### 🍱 All in One
-`Forgit` allows you to list all commands in a list and you can fuzzy search and run any command you want.
+
+![forgit](https://user-images.githubusercontent.com/1681295/220201398-3a46d506-e79b-4ac6-93d0-5a900683d5c8.jpg)
+
+![forgit-search-for-gitsigns](https://user-images.githubusercontent.com/1681295/220201722-ba78ad1d-27ca-45c9-9629-76789421c30c.jpg)
+
+`Forgit` command allows you to list all commands in a floating windows and you can fuzzy search and run any command you want.
 * vim-fugitive commands
 * forgit commands
 * forgit.nvim commands (acronym)

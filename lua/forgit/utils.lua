@@ -20,10 +20,9 @@ function utils.load_plugin(name)
     if has and lz then
       -- lazy installed
       pcall(lz.loader, name)
-    else
-      vim.cmd('packadd ' .. name) -- load with default
     end
   end
+  -- nothing I can do, packadd
 end
 
 function utils.load_module(name, modulename)

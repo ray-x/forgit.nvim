@@ -2,7 +2,6 @@ local function fugitive_enabled()
   if _FORGIT_CFG.fugitive == false then
     return false
   end
-  vim.cmd('packadd vim-fugitive')
   return vim.fn.exists('*fugitive#Command') > 0
 end
 
@@ -10,13 +9,11 @@ local function gitsigns_enabled()
   if _FORGIT_CFG.gitsigns == false then
     return false
   end
-  vim.cmd('packadd gitsigns.nvim')
   local ok = pcall(require, 'gitsigns')
   return ok ~= nil
 end
 local function flog_enabled()
   if _FORGIT_CFG.flog == true then
-    vim.cmd('packadd vim-flog')
     return vim.fn.exists('*flog#cmd#Flog') > 0
   end
   return false
