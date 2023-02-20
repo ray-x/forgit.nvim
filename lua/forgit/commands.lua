@@ -9,7 +9,6 @@ local log = utils.log
 local M = {}
 local cmds
 local function fugitive_installed()
-  vim.cmd('packadd vim-fugitive')
   return vim.fn.exists('*fugitive#Command') > 0
 end
 
@@ -289,7 +288,9 @@ function M.setup()
     cmd = vim.split(cmd, ' ')
     print(vim.inspect(cmd))
 
-    local preview_cmd = [[--prompt "select name to edit >" --preview-window "right,70%" --preview "git diff ]] .. diff_prev() .. '"'
+    local preview_cmd = [[--prompt "select name to edit >" --preview-window "right,70%" --preview "git diff ]]
+      .. diff_prev()
+      .. '"'
     local fzf = require('forgit.fzf').run
     fzf(cmd, function(line)
       vim.cmd('edit ' .. line)
@@ -320,7 +321,9 @@ function M.setup()
     cmd = vim.split(cmd, ' ')
     print(vim.inspect(cmd))
 
-    local preview_cmd = [[--prompt "select name & diff >"  --preview-window "right,70%" --preview "git diff ]] .. diff_prev() .. '"'
+    local preview_cmd = [[--prompt "select name & diff >"  --preview-window "right,70%" --preview "git diff ]]
+      .. diff_prev()
+      .. '"'
     local fzf = require('forgit.fzf').run
     fzf(cmd, function(line)
       log('DiffviewOpen ' .. master .. ' -- ' .. line)
@@ -478,7 +481,6 @@ function M.setup()
       end
     end, preview_cmd)
   end, { nargs = '*', bang = true, desc = 'select hash and diff file/(all!) with DiffviewOpen' })
-
 
   -- git log diff tool
 
