@@ -141,7 +141,7 @@ function M.setup()
         end
       end
       log('ab ' .. n .. ' ' .. g .. ' ' .. cmdstr)
-      vim.cmd('ab ' .. n .. ' ' .. g .. ' ' .. cmdstr)
+      vim.cmd('cab ' .. n .. ' ' .. g .. ' ' .. cmdstr)
     end
     create_cmd(name, function(opts)
       local cmdstr = cmd
@@ -199,7 +199,7 @@ function M.setup()
       end
 
       log(cmdstr)
-      vim.notify(cmdstr)
+      vim.notify(cmdstr, vim.log.levels.DEBUG)
     end, {
       nargs = '*',
       desc = 'forgit command alias ' .. vim.inspect(cmd),

@@ -20,7 +20,7 @@ local function close_float_terminal(code, data)
     api.nvim_win_close(float_term_win[2], true)
   end
   if code or data then
-    vim.notify(vim.inspect(code) .. vim.inspect(data))
+    vim.notify(vim.inspect(code) .. vim.inspect(data), vim.log.levels.DEBUG)
   end
 end
 
@@ -33,8 +33,9 @@ local term = function(opts)
   opts.title = opts.title or opts.cmd
   opts.closer = function(c, d)
     if d ~= 0 then
-      local msg = string.format("Error: %s jobid: %s exit code: %s" ,opts.cmd , vim.inspect(c) , vim.inspect(d))
-      vim.notify(msg)
+      local msg =
+        string.format('Error: %s jobid: %s exit code: %s', opts.cmd, vim.inspect(c), vim.inspect(d))
+      vim.notify(msg, vim.log.levels.DEBUG)
     end
   end
   return guihua_term.gui_term(opts)

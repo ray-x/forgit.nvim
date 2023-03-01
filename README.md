@@ -14,6 +14,11 @@ You need
 
 - [install forgit](https://github.com/wfxr/forgit)
 - [fzf](https://github.com/junegunn/fzf) so you can confirm/select the matches to apply your changes, also check [fzf-vim-integration](https://github.com/junegunn/fzf/blob/master/doc/fzf.txt), [as vim plugin](https://github.com/junegunn/fzf#as-vim-plugin) and [fzf README-VIM](https://github.com/junegunn/fzf/blob/master/README-VIM.md)
+    - Note: if you use linux e.g. arch, put this in your vimrc/init.lua
+    ```vim
+    set rtp+=/usr/share/vim/vimfiles
+    runtime! plugin/fzf.vim
+    ```
 - install git-fuzzy (optional)
 - by default the plugin using [fd](https://github.com/sharkdp/fd) to list all files in the current folder, you can use
   `git ls_file`
