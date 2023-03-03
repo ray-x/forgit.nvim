@@ -89,7 +89,7 @@ function M.setup()
     Gfa = git .. ' fetch --all',
     Gfr = {
       cmd = git .. ' fetch; and git rebase',
-      fcmd = 'Gf | Gr',
+      fcmd = 'Gf | Grb',
       close_on_exit = false,
       qf = false,
     }, -- Gf | Gr

@@ -2,21 +2,19 @@
 
 Interactive git commands with fzf.
 
-Highlights of features
- * fzf the file you changed in your PR
- * fzf a branch and diff with diff tools of your choice
+Highlights
+ * fzf the files you changed in your PR
+ * fzf branches and diff with diff tools of your choice
  * search git (ref)log with fzf
  * pretty git graph
  * fzf stash with preview and pop stash
  * fzf hashes and diff tools of your choice
-
-This plug is a wrapper of interactive git commands
  * [forgit](https://github.com/wfxr/forgit) by `Wenxuan Zhang`
  * [git-fuzzy](htps://github.com/bigH/git-fuzzy)
  * 42 git commands alias
  * integrated with [diffview.nvim](https://github.com/sindrets/diffview.nvim)
  * Wraps vim-fugitive commands
- * Up to 100 git commands / alias supported
+ * Up to 100 git commands / alias supported, e.g. `Gfr` for `git fetch; git rebase`
 
 You need
 
