@@ -215,7 +215,7 @@ function M.setup()
     })
   end
 
-  local function diff_prev()
+  local function diff_preview()
     local diff_str = ''
     local w = math.floor(vim.o.columns * 0.60)
     if _FORGIT_CFG.diff_pager == 'delta' then
@@ -287,9 +287,8 @@ function M.setup()
     log(cmd)
     cmd = vim.split(cmd, ' ')
     print(vim.inspect(cmd))
-
-    local preview_cmd = [[--prompt "select name to edit >" --preview-window "right,70%" --preview "git diff ]]
-      .. diff_prev()
+    local preview_cmd = [[--prompt "select name to edit >" --preview-window "right,72%" --preview "echo {} | xargs -I% git diff  -- % ]]
+      .. diff_preview()
       .. '"'
     local fzf = require('forgit.fzf').run
     fzf(cmd, function(line)
@@ -321,8 +320,8 @@ function M.setup()
     cmd = vim.split(cmd, ' ')
     print(vim.inspect(cmd))
 
-    local preview_cmd = [[--prompt "select name & diff >"  --preview-window "right,70%" --preview "git diff ]]
-      .. diff_prev()
+    local preview_cmd = [[--prompt "select name & diff >"  --preview-window "right,72%" --preview "echo {} | xargs -I% git diff -- % ]]
+      .. diff_preview()
       .. '"'
     local fzf = require('forgit.fzf').run
     fzf(cmd, function(line)
@@ -347,8 +346,8 @@ function M.setup()
     end
     cmd = vim.split(cmd, ' ')
     local fzf = require('forgit.fzf').run
-    local preview_cmd = [[--prompt "select branch & checkout >" --preview-window "right,72%" --preview "echo {} | grep -v '^*' | xargs git diff ]]
-      .. diff_prev()
+    local preview_cmd = [[--prompt "select branch & checkout >" --preview-window "right,72%" --preview "echo {} | grep -v '^*' | xargs -I% git diff -- %]]
+      .. diff_preview()
       .. '"'
     fzf(cmd, function(line)
       print(vim.fn.system('git checkout ' .. line))
@@ -371,37 +370,16 @@ function M.setup()
     M.cmdlst.Gfz = 'git fuzzy'
   end
 
-  -- M.cmdlst.Gcbc = 'git branch --sort=-committerdate && checkout'
-  -- create_cmd('Gcbc', function(opts)
-  --   local cmd = 'git branch --sort=-committerdate'
-  --   if opts and opts.fargs and #opts.fargs > 0 then
-  --     for _, arg in ipairs(opts.fargs) do
-  --       cmd = cmd .. ' ' .. arg
-  --     end
-  --   end
-  --
-  --   log(cmd)
-  --   cmd = vim.split(cmd, ' ')
-  --   local fzf = require('forgit.fzf').run
-  --   fzf(
-  --     cmd,
-  --     function(line)
-  --       print(vim.fn.system('git checkout ' .. line))
-  --     end,
-  --     [[--prompt "select name & checkout >"  --ansi --preview "git log --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' {1}"]]
-  --   )
-  -- end, { nargs = '*', desc = 'git branch | fzf | xargs -r git co ' })
-
   create_cmd('Gdc', function(opts)
     local sh = vim.o.shell
 
     local cmd = [[hash=$(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]'); git diff $hash --name-only|fzf -m --ansi  --preview-window "right,75%"  --preview "git diff $hash --color=always -- {-1}]]
-      .. diff_prev()
+      .. diff_preview()
       .. '"'
       .. '|xargs -r git checkout  $hash'
     if sh:find('fish') then
       cmd = [[set hash $(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]') ; git diff $hash --name-only|fzf -m --ansi  --preview-window "right,75%"  --preview "git diff $hash --color=always -- {-1}]]
-        .. diff_prev()
+        .. diff_preview()
         .. '"'
         .. '|xargs -r git checkout $hash'
     end
@@ -454,8 +432,8 @@ function M.setup()
       cmd = cmd .. ' ' .. vim.fn.expand('%')
     end
 
-    local preview_cmd = [[--prompt "select hash >" --preview-window "right,62%" --preview "echo {} | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]' | xargs -I% git show --color=always -U$_forgit_preview_context % -- $(sed -nE 's/.* -- (.*)/\1/p' <<< "$*") ]]
-      .. diff_prev()
+    local preview_cmd = [[--prompt "select hash >" --preview-window "right,70%" --preview "echo {} | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]' | xargs -I% git show --color=always -U$_forgit_preview_context % -- $(sed -nE 's/.* -- (.*)/\1/p' <<< "$*") ]]
+      .. diff_preview()
       .. '"'
 
     if opts and opts.fargs and #opts.fargs > 0 then
@@ -488,7 +466,7 @@ function M.setup()
   create_cmd('Gldt', function(opts)
     local sh = vim.o.shell
 
-    local diffp = diff_prev()
+    local diffp = diff_preview()
 
     local cmd = [[$(git log  --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' | fzf | grep -Eo '[a-f0-9]+' | head -1 | tr -d '[:space:]'); git diff $hash --name-only|fzf -m --ansi --preview-window "right,72%" --preview "git diff $hash --color=always -- {-1}]]
       .. diffp
