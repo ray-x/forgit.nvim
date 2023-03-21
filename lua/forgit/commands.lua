@@ -100,6 +100,7 @@ function M.setup()
     Gmnff = git .. ' merge --no-ff',
     Gpl = git .. ' pull',
     Gplr = git .. ' pull --rebase',
+    Gpla = git .. ' pull --autostash',
     Gps = git .. ' push',
     Gpsf = git .. ' push --force-with-lease',
     Gr = git .. ' remote -v',
@@ -320,7 +321,9 @@ function M.setup()
     cmd = vim.split(cmd, ' ')
     print(vim.inspect(cmd))
 
-    local preview_cmd = [[--prompt "select name & diff >"  --preview-window "right,72%" --preview "echo {} | xargs -I% git diff -- % ]]
+    local preview_cmd = [[--prompt "select name & diff >"  --preview-window "right,72%" --preview "echo {} | xargs -I% git diff ]]
+      .. master
+      .. [[... -- % ]]
       .. diff_preview()
       .. '"'
     local fzf = require('forgit.fzf').run
@@ -339,20 +342,33 @@ function M.setup()
   M.cmdlst.Gbc = 'git branch --sort=-committerdate && checkout'
   create_cmd('Gbc', function(opts)
     local cmd = 'git branch --sort=-committerdate'
+    if opts.bang then
+      cmd = 'git branch -r --sort=-committerdate'
+    end
     if opts and opts.fargs and #opts.fargs > 0 then
       for _, arg in ipairs(opts.fargs) do
         cmd = cmd .. ' ' .. arg
       end
     end
+
+    local master = vim.fn.system('git rev-parse --abbrev-ref master')
+    if master:find('fatal') then
+      master = 'main'
+    else
+      master = 'master'
+    end
     cmd = vim.split(cmd, ' ')
     local fzf = require('forgit.fzf').run
-    local preview_cmd = [[--prompt "select branch & checkout >" --preview-window "right,72%" --preview "echo {} | grep -v '^*' | xargs -I% git diff -- %]]
+    local preview_cmd = [[--prompt "select branch & checkout >" --preview-window "right,72%" --preview "echo {} | grep -v 'origin/HEAD' | grep -v '^*' | xargs -I% git diff ]]
+      .. master
+      .. '...%'
       .. diff_preview()
       .. '"'
     fzf(cmd, function(line)
+      line = line:gsub('origin/', '')
       print(vim.fn.system('git checkout ' .. line))
     end, preview_cmd)
-  end, { nargs = '*' })
+  end, { nargs = '*', bang = true })
 
   if _FORGIT_CFG.git_fuzzy == true then
     create_cmd('Gfz', function(opts)
@@ -370,6 +386,7 @@ function M.setup()
     M.cmdlst.Gfz = 'git fuzzy'
   end
 
+  -- diff commit
   create_cmd('Gdc', function(opts)
     local sh = vim.o.shell
 
@@ -419,11 +436,11 @@ function M.setup()
 
         diff('!git diff ' .. line)
       end,
-      [[--prompt "select branch to diff >" --ansi --preview "git log --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' {1}"]]
+      [[--prompt "select branch to view >" --ansi --preview "git log --graph --format='%C(auto)%h%d %s %C(auto)%C(bold)%cr%Creset' {1}"]]
     )
   end, { nargs = '*', bang = true, desc = 'select hash and diff file/(all!) with DiffviewOpen' })
 
-  M.cmdlst.Gbdo = 'select hash and diff file/(all!) with DiffviewOpen'
+  M.cmdlst.Gbdo = 'select branch and view log graph file/(all!) with DiffviewOpen'
 
   M.cmdlst.Gldo = 'select hash and diff file/(all!) with DiffviewOpen'
   create_cmd('Gldo', function(opts)

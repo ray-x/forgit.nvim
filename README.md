@@ -2,6 +2,13 @@
 
 Interactive git commands with fzf.
 
+An elevator pitch:
+ * Providing the most efficient way to view local/remote branches, commits, files, diffs, stashes, etc. in neovim.
+ Get what you want in 2~5 keystrokes from cmd line?
+ * Are you sure your 'p' key bind is `pull` or `push`? Your 'c' key bind is `commit` or `checkout`?
+ * Do you stackoverflow the git commands e.g. rebase/stash/pick?
+ * Do you feel the integration of git and your setup is not efficient enough?
+
 Highlights
  * fzf the files you changed in your PR
  * fzf branches and diff with diff tools of your choice
@@ -99,6 +106,7 @@ require'forgit'.setup({
 |Gac     | Interactive `git add` generator, if file staged, run 'git commit' |
 |Gfz     | run `git fuzzy`, sub commands supports, e.g. `Gfz status` |
 |Gbc     | Interactive `git branch && checkout` generator |
+|Gbc!    | Interactive `git branch -r && checkout` generator |
 |Gde     | Interactive `git diff --name-only & edit selected file` generator |
 |Gde!    | Interactive `git diff master/main --name-only & edit selected file` generator |
 |Gdd     | Interactive `git diff --name-only & OpendiffView selected file` generator |
@@ -166,6 +174,7 @@ require'forgit'.setup({
 |Gopen| git  config --get remote.origin.url | xargs open |
 |Gpl| git  pull |
 |Gplr| git  pull --rebase |
+|Gpla| git  pull --autostash |
 |Gps| git  push |
 |Gpsf| git  push --force-with-lease |
 |Gr| git  remote -v |
