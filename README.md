@@ -3,8 +3,8 @@
 Interactive git commands with fzf.
 
 An elevator pitch:
- * Providing the most efficient way to view local/remote branches, commits, files, diffs, stashes, etc. in neovim.
- Get what you want in 2~5 keystrokes from cmd line?
+ * fzf + delta branches, commits, files, diffs, stashes, etc.
+ * Get what you want in 2~5 keystrokes from cmd line?
  * Are you sure your 'p' key bind is `pull` or `push`? Your 'c' key bind is `commit` or `checkout`?
  * Do you stackoverflow the git commands e.g. rebase/stash/pick?
  * Do you feel the integration of git and your setup is not efficient enough?
