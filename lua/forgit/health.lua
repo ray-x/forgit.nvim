@@ -7,11 +7,13 @@ if not vim.health then
   health = require('health')
 end
 
-local start = health.report_start
-local ok = health.report_ok
-local error = health.report_error
-local warn = health.report_warn
-local info = health.report_info
+local nvim_09 = vim.fn.has('nvim-0.9') == 1
+
+local start = nvim_09 and health.start or health.report_start
+local ok = nvim_09 and health.ok or health.report_ok
+local error = nvim_09 and health.error or health.report_error
+local warn = nvim_09 and health.warn or health.report_warn
+local info = nvim_09 and health.info or health.report_info
 local vfn = vim.fn
 
 local function binary_check()
@@ -63,7 +65,7 @@ local function binary_check()
   end
 
   if vfn.exists('*fugitive#Command') > 0 then
-    info ('git fugitive installed')
+    info('git fugitive installed')
   else
     no_err = false
     warn('git fugitive is not installed')
@@ -72,7 +74,9 @@ local function binary_check()
   if no_err then
     ok('All binaries installed')
   else
-    warn('Some binaries are not installed, please check if your $HOME/go/bin or $GOBIN $exists and in your $PATH')
+    warn(
+      'Some binaries are not installed, please check if your $HOME/go/bin or $GOBIN $exists and in your $PATH'
+    )
   end
 end
 
