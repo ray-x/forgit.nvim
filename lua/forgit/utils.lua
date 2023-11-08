@@ -1,9 +1,9 @@
 local utils = {}
 
 local os_name = vim.loop.os_uname().sysname
-local is_windows = os_name == 'Windows' or os_name == 'Windows_NT'
+utils.is_windows = os_name == 'Windows' or os_name == 'Windows_NT' or os_name:find('MINGW')
 function utils.sep()
-  if is_windows then
+  if utils.is_windows then
     return '\\'
   end
   return '/'

@@ -3,6 +3,7 @@
 Interactive git commands with fzf.
 
 An elevator pitch:
+
  * fzf + delta branches, commits, files, diffs, stashes, etc.
  * Get what you want in 2~5 keystrokes from cmd line?
  * Are you sure your 'p' key bind is `pull` or `push`? Your 'c' key bind is `commit` or `checkout`?
@@ -37,6 +38,8 @@ You need
   `git ls_file`
 - a diff pager, e.g. `delta`
 - vim-fugitive (highly recommended)
+- Windows user need to install bash e.g. [git bash](https://git-scm.com/downloads) and forgit. You may need to put
+`git-forgit` to your PATH.
 
 https://user-images.githubusercontent.com/1681295/207864539-ec65b9c4-d8a0-4509-b13f-bd2192f742d9.mp4
 

@@ -6,6 +6,7 @@ _FORGIT_CFG = {
   debug = false, -- set to true to enable debug logging
   log_path = nil, -- set to a path to log to a file
   fugitive = true, -- vim-fugitive is installed (why not)
+  forgit_path = 'git-forgit', -- git_forgit script path
   abbreviate = false, -- abvreviate some of the commands e.g. gps -> Gps
   flog = false, -- vim-flog
   gitsigns = true, -- gitsigns.nvim
@@ -61,24 +62,28 @@ local ga_bang = function(opts)
 end
 
 local cmds = {
-  { 'Ga', 'git add' },
-  { 'Glo', 'git log' },
-  { 'Gi', 'git ignore' },
-  { 'Gd', 'git diff' },
-  { 'Grh', 'git reset HEAD <file>' },
-  { 'Gcf', 'git checkout file' },
-  { 'Gcb', 'git checkout <branch>' },
-  { 'Gbd', 'git checkout -D branch' },
-  { 'Gct', 'git checkout <tag>' },
-  { 'Gco', 'git checkout <commit>' },
-  { 'Grc', 'git revert <commit>' },
-  { 'Gss', 'git stash' },
-  { 'Gsp', 'git stash push' },
-  { 'Gclean', 'git clean' },
-  { 'Gcp', 'git cherry-pick' },
-  { 'Grb', 'git rebase -i' },
-  { 'Gbl', 'git blame' },
-  { 'Gfu', 'git commit --fixup && git rebase -i --autosquash' },
+  { 'Ga', 'git add', 'add' },
+  { 'Glo', 'git log', 'log' },
+  { 'Gi', 'git ignore', 'ignore' },
+  { 'Gd', 'git diff', 'diff' },
+  { 'Grh', 'git reset HEAD <file>', 'reset HEAD' },
+  { 'Gcf', 'git checkout file', 'checkout_file' },
+  { 'Gcb', 'git checkout <branch>', 'checkout_branch' },
+  { 'Gbd', 'git checkout -D branch', 'checkout_branch' },
+  { 'Gct', 'git checkout <tag>', 'checkout_tag' },
+  { 'Gco', 'git checkout <commit>', 'checkout_commit' },
+  { 'Grc', 'git revert <commit>', 'revert_commit' },
+  { 'Gss', 'git stash', 'stash_show' },
+  { 'Gsp', 'git stash push', 'stash_commit' },
+  { 'Gclean', 'git clean', 'clean' },
+  { 'Gcp', 'git cherry-pick', 'cherry_pick' },
+  { 'Grb', 'git rebase -i', 'rebase fixup' },
+  { 'Gbl', 'git blame', 'blame' },
+  {
+    'Gfu',
+    'git commit --fixup && git rebase -i --autosquash',
+    'git commit --fixup && git rebase -i --autosquash',
+  },
 }
 
 M.cmds = cmds
@@ -117,8 +122,11 @@ M.setup = function(cfg)
     -- create_cmd(cmd, 'lua require("forgit").' .. cmd:lower() .. '()')
     local cmd = cmd_info[1]
     local cmd_details = cmd_info[2]
+    local forgit_subcmd = cmd_info[3]
+    local cmd_tbl = {}
     create_cmd(cmd, function(opts)
       local cmdstr = string.lower(cmd)
+      table.insert(cmd_tbl, cmdstr)
       local autoclose
       if vim.tbl_contains({ 'gd' }, cmdstr) then
         autoclose = false
@@ -128,6 +136,7 @@ M.setup = function(cfg)
       if opts and opts.fargs and #opts.fargs > 0 then
         for _, arg in ipairs(opts.fargs) do
           cmdstr = cmdstr .. ' ' .. arg
+          table.insert(cmd_tbl, arg)
         end
       end
       if cmdstr:find('ga') and opts.bang then
@@ -140,10 +149,19 @@ M.setup = function(cfg)
       if _FORGIT_CFG.shell_mode and (sh:find('zsh') or sh:find('bash')) then
         log('cmd: ' .. cmdstr)
         cmdstr = sh .. ' -i -c ' .. cmdstr
+        table.insert(cmd_tbl, 1, sh)
+        table.insert(cmd_tbl, 1, '-i')
+        table.insert(cmd_tbl, 1, '-c')
       end
       local term = require('forgit.term').run
       log(cmdstr)
-      term({ cmd = cmdstr, autoclose = autoclose, title = cmd_details })
+      local c
+      if utils.is_windows then
+        c = { 'bash', '-i', '-c', _FORGIT_CFG.forgit_path .. ' ' .. forgit_subcmd }
+      else
+        c = cmdstr
+      end
+      term({ cmd = c, autoclose = autoclose, title = cmd_details })
     end, {
       nargs = '*',
       bang = true,
