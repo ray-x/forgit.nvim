@@ -29,6 +29,7 @@ end
 local guihua_helper = utils.load_module('guihua.lua', 'guihua.helper')
 if not guihua_helper then
   utils.warn('guihua not installed, please install ray-x/guihua.lua for GUI functions')
+  guihua_helper = {is_installed = function() return false end}
 end
 
 local ga_bang = function(opts)
