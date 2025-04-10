@@ -47,6 +47,7 @@ end
 -- term({ cmd = {'lazygit'}, autoclose = true })
 
 -- term({ cmd = 'git diff --', autoclose = false })
+-- term({ cmd = 'git-forgit add', autoclose = false })
 -- term({ cmd = 'git show', autoclose = false })
 -- term({ cmd = { 'bash', '-i', '-c', 'git-forgit add' }, autoclose = false })
 return { run = term, close = close_float_terminal }

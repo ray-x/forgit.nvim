@@ -29,7 +29,11 @@ end
 local guihua_helper = utils.load_module('guihua.lua', 'guihua.helper')
 if not guihua_helper then
   utils.warn('guihua not installed, please install ray-x/guihua.lua for GUI functions')
-  guihua_helper = {is_installed = function() return false end}
+  guihua_helper = {
+    is_installed = function()
+      return false
+    end,
+  }
 end
 
 local ga_bang = function(opts)
@@ -127,7 +131,8 @@ M.setup = function(cfg)
     local cmd_tbl = {}
     create_cmd(cmd, function(opts)
       local cmdstr = string.lower(cmd)
-      table.insert(cmd_tbl, cmdstr)
+      table.insert(cmd_tbl, _FORGIT_CFG.forgit_path)
+      table.insert(cmd_tbl, forgit_subcmd)
       local autoclose
       if vim.tbl_contains({ 'gd' }, cmdstr) then
         autoclose = false
@@ -155,12 +160,13 @@ M.setup = function(cfg)
         table.insert(cmd_tbl, 1, '-c')
       end
       local term = require('forgit.term').run
-      log(cmdstr)
+      log(cmdstr, cmd_tbl)
       local c
       if utils.is_windows then
-        c = { 'bash', '-i', '-c', _FORGIT_CFG.forgit_path .. ' ' .. forgit_subcmd }
+        c = { 'bash', '-i', '-c', _FORGIT_CFG.forgit_path, forgit_subcmd }
       else
-        c = cmdstr
+        c = cmd_tbl
+
       end
       term({ cmd = c, autoclose = autoclose, title = cmd_details })
     end, {
