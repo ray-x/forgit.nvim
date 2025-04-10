@@ -61,78 +61,78 @@ local function diff(cmd, args)
 end
 
 function M.setup()
-  local git = '' -- leading? delay the eval for lazyloading
-
-  cmds = {
-    Gaa = git .. [[ add --all]],
-    Gap = git .. ' add -pu',
-    Gs = { cmd = git .. ' status', fcmd = 'Git', close_on_exit = false },
-    Gash = git .. ' stash',
-    Gasha = git .. ' stash apply',
-    Gashl = git .. ' stash list',
-    Gashp = git .. ' stash pop',
-    Gashu = git .. ' stash --include-untracked',
-    Gau = git .. ' add -u',
-    Gbs = git .. ' bisect',
-    Gbsb = git .. ' bisect bad',
-    Gbsg = git .. ' bisect good',
-    Gbsr = git .. ' bisect reset',
-    Gbss = git .. ' bisect start',
-    Gc = git .. ' commit',
-    Gce = git .. ' clean',
-    Gcef = git .. ' clean -fd',
-    Gcl = git .. ' clone {url}',
-    Gdf = git .. ' diff --',
-    Gdnw = git .. ' diff -w --',
-    Gdw = git .. ' diff --word-diff',
-    Gf = git .. ' fetch',
-    Gfa = git .. ' fetch --all',
-    Gfr = {
-      cmd = git .. ' fetch; and git rebase',
-      fcmd = 'Gf | Grb',
-      close_on_exit = false,
-      qf = false,
-    }, -- Gf | Gr
-    Glg = git
-      .. " log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all",
-    Gm = git .. ' merge',
-    Gmff = git .. ' merge --ff',
-    Gmnff = git .. ' merge --no-ff',
-    Gpl = git .. ' pull',
-    Gplr = git .. ' pull --rebase',
-    Gpla = git .. ' pull --autostash',
-    Gps = git .. ' push',
-    Gpsf = git .. ' push --force-with-lease',
-    Gr = git .. ' remote -v',
-    Grb = git .. ' rebase',
-    Grbi = git .. ' rebase -i',
-    Grbc = git .. ' rebase --continue',
-    Grba = git .. ' rebase --abort',
-    Grs = git .. ' reset --',
-    Grsh = git .. ' reset --hard',
-    Grsl = git .. ' reset HEAD~',
-    Gsh = git .. ' show',
-    Gt = git .. ' tag',
-    Gtop = git .. ' rev-parse --show-toplevel',
-    Gurl = git .. ' config --get remote.origin.url',
-  }
+  local cmds = function(git)
+    return {
+      Gaa = git .. [[ add --all]],
+      Gap = git .. ' add -pu',
+      Gs = { cmd = git .. ' status', fcmd = 'Git', close_on_exit = false },
+      Gash = git .. ' stash',
+      Gasha = git .. ' stash apply',
+      Gashl = git .. ' stash list',
+      Gashp = git .. ' stash pop',
+      Gashu = git .. ' stash --include-untracked',
+      Gau = git .. ' add -u',
+      Gbs = git .. ' bisect',
+      Gbsb = git .. ' bisect bad',
+      Gbsg = git .. ' bisect good',
+      Gbsr = git .. ' bisect reset',
+      Gbss = git .. ' bisect start',
+      Gc = git .. ' commit',
+      Gce = git .. ' clean',
+      Gcef = git .. ' clean -fd',
+      Gcl = git .. ' clone {url}',
+      Gdf = git .. ' diff --',
+      Gdnw = git .. ' diff -w --',
+      Gdw = git .. ' diff --word-diff',
+      Gf = git .. ' fetch',
+      Gfa = git .. ' fetch --all',
+      Gfr = {
+        cmd = git .. ' fetch; and git rebase',
+        fcmd = 'Gf | Grb',
+        close_on_exit = false,
+        qf = false,
+      }, -- Gf | Gr
+      Glg = git
+        .. " log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all",
+      Gm = git .. ' merge',
+      Gmff = git .. ' merge --ff',
+      Gmnff = git .. ' merge --no-ff',
+      Gpl = git .. ' pull',
+      Gplr = git .. ' pull --rebase',
+      Gpla = git .. ' pull --autostash',
+      Gps = git .. ' push',
+      Gpsf = git .. ' push --force-with-lease',
+      Gr = git .. ' remote -v',
+      Grb = git .. ' rebase',
+      Grbi = git .. ' rebase -i',
+      Grbc = git .. ' rebase --continue',
+      Grba = git .. ' rebase --abort',
+      Grs = git .. ' reset --',
+      Grsh = git .. ' reset --hard',
+      Grsl = git .. ' reset HEAD~',
+      Gsh = git .. ' show',
+      Gt = git .. ' tag',
+      Gtop = git .. ' rev-parse --show-toplevel',
+      Gurl = git .. ' config --get remote.origin.url',
+    }
+  end
   M.cmdlst = {}
 
   if _FORGIT_CFG.git_alias == false then
     cmds = {}
   end
 
-  for name, cmd in pairs(cmds) do
+  local f = _FORGIT_CFG.fugitive
+  local g = 'Git'
+  if not f then
+    g = 'git'
+  end
+  for name, cmd in pairs(cmds(g)) do
     M.cmdlst[name] = cmd
 
+    local n = name:lower()
     if _FORGIT_CFG.abbreviate == true and name ~= 'Gfr' and #name > 2 then
       local cmdstr = cmd
-      local f = _FORGIT_CFG.fugitive
-      local n = name:lower()
-      local g = 'Git'
-      if not f then
-        g = '!git'
-      end
 
       if type(cmd) == 'table' then
         if f then
@@ -161,13 +161,6 @@ function M.setup()
       then
         return diff(cmdstr, opts.fargs)
       end
-      if f then
-        git = 'Git'
-      else
-        git = 'git'
-      end
-      cmdstr = git .. cmdstr -- here is the place to assign Git/!git
-
       if cmdstr:find('commit') and not use_fugitive() and (not cmdstr:find('graph')) then
         return commit_input(opts.fargs)
       end
@@ -187,20 +180,37 @@ function M.setup()
         then
           term({ cmd = cmdstr, autoclose = false, title = cmdstr })
         else
-          local lines = vim.fn.systemlist(vim.split(cmdstr, ' '))
-          if _FORGIT_CFG.show_result == 'quickfix' then
-            if #lines > 0 then
-              vim.fn.setqflist({}, 'a', { title = cmdstr, lines = lines })
-              vim.cmd('copen')
+          local cmdlst = vim.split(cmdstr, ' ')
+          vim.system(cmdlst, { text = true }, function(obj)
+            if obj.code ~= 0 then
+              vim.schedule(function()
+                vim.notify(
+                  'Error: ' .. cmdstr .. ' failed with code: ' .. obj.code .. obj.stderr .. obj.stdout,
+                  vim.log.levels.ERROR
+                )
+              end)
+              return
             end
-          else
-            vim.notify(table.concat(lines, '\n'))
-          end
+
+            local lines = vim.split(obj.stdout, '\n')
+            if _FORGIT_CFG.show_result == 'quickfix' then
+              if #lines > 0 then
+                vim.schedule(function()
+                  vim.fn.setqflist({}, 'a', { title = cmdstr, lines = lines })
+                  vim.cmd('copen')
+                end)
+              end
+            else
+              if #lines > 0 then
+                vim.schedule(function()
+                  vim.notify(cmdstr .. ' ' .. table.concat(lines, '\n'))
+                end)
+              end
+            end
+          end)
         end
       end
-
       log(cmdstr)
-      vim.notify(cmdstr, vim.log.levels.DEBUG)
     end, {
       nargs = '*',
       desc = 'forgit command alias ' .. vim.inspect(cmd),
@@ -566,7 +576,7 @@ function M.setup()
 
   vim.api.nvim_create_user_command(
     'Forgit',
-    function (opts) require("forgit.list").git_cmds(unpack(opts.fargs)) end,
+    function(opts) require("forgit.list").git_cmds(unpack(opts.fargs)) end,
     { nargs = '*', complete = function(a, l) return require('forgit.list').forgit_subcmds end }
   )
 
@@ -575,6 +585,7 @@ function M.setup()
     return M.cmdlst
   end
 end
+
 -- term({ cmd = 'git diff --', autoclose = false })
 
 return M
