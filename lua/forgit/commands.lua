@@ -566,8 +566,8 @@ function M.setup()
 
   vim.api.nvim_create_user_command(
     'Forgit',
-    'lua require("forgit.list").git_cmds()',
-    { nargs = '*' }
+    function (opts) require("forgit.list").git_cmds(unpack(opts.fargs)) end,
+    { nargs = '*', complete = function(a, l) return require('forgit.list').forgit_subcmds end }
   )
 
   M.cmdlst.Gs = 'git status'

@@ -1,3 +1,5 @@
+local utils = require('forgit.utils')
+local log = utils.log
 local function fugitive_enabled()
   if _FORGIT_CFG.fugitive == false then
     return false
@@ -20,7 +22,7 @@ local function flog_enabled()
 end
 
 local fg = {
-  { cmd = 'Git', text = 'Git {args} | Run an arbitrary git command and display any output.' },
+  { cmd = 'Git',       text = 'Git {args} | Run an arbitrary git command and display any output.' },
   {
     cmd = 'Git',
     text = 'Git! {args} | Run an arbitrary git command in the background and stream the output to the preview window.',
@@ -31,11 +33,13 @@ local fg = {
   },
   {
     cmd = '1,10Git -p',
-    text = '{range}Git! --paginate {args} | Run an arbitrary git command, and insert the output after {range} in the current buffer.',
+    text =
+    '{range}Git! --paginate {args} | Run an arbitrary git command, and insert the output after {range} in the current buffer.',
   },
   {
     cmd = 'Git blame',
-    text = 'Git blame [flags] | Run git-blame [flags] on the current file and open the results in a scroll-bound vertical split.',
+    text =
+    'Git blame [flags] | Run git-blame [flags] on the current file and open the results in a scroll-bound vertical split.',
   },
   {
     cmd = 'Gclog',
@@ -43,7 +47,8 @@ local fg = {
   },
   {
     cmd = '1,10Gclog',
-    text = '{range}Gclog | Use git-log -L to load previous revisions of the given range of the current file into the |quickfix| list.',
+    text =
+    '{range}Gclog | Use git-log -L to load previous revisions of the given range of the current file into the |quickfix| list.',
   },
   {
     cmd = 'Git difftool',
@@ -57,17 +62,17 @@ local fg = {
     cmd = 'Gllog',
     text = 'Gllog |  Like |:Gclog|, but use the location list instead of the |quickfix| list',
   },
-  { cmd = 'Gcd', text = 'Gcd [directory] | :cd relative to the repository.' },
-  { cmd = 'Glcd', text = 'Glcd [directory] | :lcd relative to the repository.' },
-  { cmd = 'Gedit', text = 'Gedit [object] | :edit a |fugitive-object|.' },
-  { cmd = 'Gsplit', text = 'Gsplit [object] | :split a |fugitive-object|.' },
-  { cmd = 'Gvsplit', text = 'Gvsplit [object] | :vsplit a |fugitive-object|.local' },
-  { cmd = 'Gtabedit', text = 'Gtabedit [object] | :tabedit| a |fugitive-object|.' },
-  { cmd = 'Gpedit', text = 'Gpedit [object] | :pedit a |fugitive-object|.' },
-  { cmd = 'Gdrop', text = 'Gdrop [object] | :drop a |fugitive-object|.' },
-  { cmd = 'Gread', text = 'Gread [object] | Empty the buffer and |:read| a |fugitive-object|.' },
+  { cmd = 'Gcd',       text = 'Gcd [directory] | :cd relative to the repository.' },
+  { cmd = 'Glcd',      text = 'Glcd [directory] | :lcd relative to the repository.' },
+  { cmd = 'Gedit',     text = 'Gedit [object] | :edit a |fugitive-object|.' },
+  { cmd = 'Gsplit',    text = 'Gsplit [object] | :split a |fugitive-object|.' },
+  { cmd = 'Gvsplit',   text = 'Gvsplit [object] | :vsplit a |fugitive-object|.local' },
+  { cmd = 'Gtabedit',  text = 'Gtabedit [object] | :tabedit| a |fugitive-object|.' },
+  { cmd = 'Gpedit',    text = 'Gpedit [object] | :pedit a |fugitive-object|.' },
+  { cmd = 'Gdrop',     text = 'Gdrop [object] | :drop a |fugitive-object|.' },
+  { cmd = 'Gread',     text = 'Gread [object] | Empty the buffer and |:read| a |fugitive-object|.' },
   { cmd = '1,10Gread', text = '{range} Gread | :read in a |fugitive-object| after {range}.' },
-  { cmd = 'Gwrite', text = 'Gwrite | Write to the path of current file and stage the results.' },
+  { cmd = 'Gwrite',    text = 'Gwrite | Write to the path of current file and stage the results.' },
   {
     cmd = 'Gwrite',
     text = 'Gwrite {path} | You can give |:Gwrite| an explicit path of where in the work tree to write.',
@@ -78,7 +83,8 @@ local fg = {
   },
   {
     cmd = 'Gdiffsplit',
-    text = 'Gdiffsplit [object] | Perform a |vimdiff| against the given file, or if a commit is given, the current file in that commit.',
+    text =
+    'Gdiffsplit [object] | Perform a |vimdiff| against the given file, or if a commit is given, the current file in that commit.',
   },
   {
     cmd = 'Gdiffsplit!',
@@ -108,7 +114,8 @@ local fg = {
   { cmd = 'GUnlink', text = 'GUnlink same as :GRemove' },
   {
     cmd = 'GBrowse',
-    text = 'GBrowse | Open the current file, blob, tree, commit, or tag in your browser at the upstream hosting provider.',
+    text =
+    'GBrowse | Open the current file, blob, tree, commit, or tag in your browser at the upstream hosting provider.',
   },
   {
     cmd = 'GBrowse',
@@ -130,42 +137,44 @@ local fg = {
 }
 
 local gs = {
-  { text = 'gitsigns stage_hunk', cmd = 'Gitsigns stage_hunk' },
-  { text = 'gitsigns undo_stage_hunk', cmd = 'Gitsigns undo_stage_hunk' },
-  { text = 'gitsigns reset_hunk', cmd = 'Gitsigns reset_hunk' },
-  { text = 'gitsigns stage_buffer', cmd = 'Gitsigns stage_buffer' },
-  { text = 'gitsigns reset_buffer', cmd = 'Gitsigns reset_buffer' },
-  { text = 'gitsigns reset_buffer_index', cmd = 'Gitsigns reset_buffer_index' },
-  { text = 'gitsigns prev_hunk', cmd = 'Gitsigns prev_hunk' },
-  { text = 'gitsigns preview_hunk', cmd = 'Gitsigns preview_hunk' },
-  { text = 'gitsigns preview_hunk_inline', cmd = 'Gitsigns preview_hunk_inline' },
-  { text = 'gitsigns select_hunk', cmd = 'Gitsigns select_hunk' },
-  { text = 'gitsigns get_hunks', cmd = 'Gitsigns get_hunks' },
-  { text = 'gitsigns blame_line', cmd = 'Gitsigns blame_line' },
-  { text = 'gitsigns change_base', cmd = 'Gitsigns change_base' },
-  { text = 'gitsigns reset_base', cmd = 'Gitsigns reset_base' },
-  { text = 'gitsigns diffthis', cmd = 'Gitsigns diffthis' },
-  { text = 'gitsigns show', cmd = 'Gitsigns show' },
-  { text = 'gitsigns setqflist', cmd = 'Gitsigns setqflist' },
-  { text = 'gitsigns setloclist', cmd = 'Gitsigns setloclist' },
-  { text = 'gitsigns get_actions', cmd = 'Gitsigns get_actions' },
-  { text = 'gitsigns refresh', cmd = 'Gitsigns refresh' },
-  { text = 'gitsigns toggle_signs', cmd = 'Gitsigns toggle_signs' },
-  { text = 'gitsigns toggle_numhl', cmd = 'Gitsigns toggle_numhl' },
-  { text = 'gitsigns toggle_linehl', cmd = 'Gitsigns toggle_linehl' },
-  { text = 'gitsigns toggle_word_diff', cmd = 'Gitsigns toggle_word_diff' },
+  { text = 'gitsigns stage_hunk',                cmd = 'Gitsigns stage_hunk' },
+  { text = 'gitsigns undo_stage_hunk',           cmd = 'Gitsigns undo_stage_hunk' },
+  { text = 'gitsigns reset_hunk',                cmd = 'Gitsigns reset_hunk' },
+  { text = 'gitsigns stage_buffer',              cmd = 'Gitsigns stage_buffer' },
+  { text = 'gitsigns reset_buffer',              cmd = 'Gitsigns reset_buffer' },
+  { text = 'gitsigns reset_buffer_index',        cmd = 'Gitsigns reset_buffer_index' },
+  { text = 'gitsigns prev_hunk',                 cmd = 'Gitsigns prev_hunk' },
+  { text = 'gitsigns preview_hunk',              cmd = 'Gitsigns preview_hunk' },
+  { text = 'gitsigns preview_hunk_inline',       cmd = 'Gitsigns preview_hunk_inline' },
+  { text = 'gitsigns select_hunk',               cmd = 'Gitsigns select_hunk' },
+  { text = 'gitsigns get_hunks',                 cmd = 'Gitsigns get_hunks' },
+  { text = 'gitsigns blame_line',                cmd = 'Gitsigns blame_line' },
+  { text = 'gitsigns change_base',               cmd = 'Gitsigns change_base' },
+  { text = 'gitsigns reset_base',                cmd = 'Gitsigns reset_base' },
+  { text = 'gitsigns diffthis',                  cmd = 'Gitsigns diffthis' },
+  { text = 'gitsigns show',                      cmd = 'Gitsigns show' },
+  { text = 'gitsigns setqflist',                 cmd = 'Gitsigns setqflist' },
+  { text = 'gitsigns setloclist',                cmd = 'Gitsigns setloclist' },
+  { text = 'gitsigns get_actions',               cmd = 'Gitsigns get_actions' },
+  { text = 'gitsigns refresh',                   cmd = 'Gitsigns refresh' },
+  { text = 'gitsigns toggle_signs',              cmd = 'Gitsigns toggle_signs' },
+  { text = 'gitsigns toggle_numhl',              cmd = 'Gitsigns toggle_numhl' },
+  { text = 'gitsigns toggle_linehl',             cmd = 'Gitsigns toggle_linehl' },
+  { text = 'gitsigns toggle_word_diff',          cmd = 'Gitsigns toggle_word_diff' },
   { text = 'gitsigns toggle_current_line_blame', cmd = 'Gitsigns toggle_current_line_blame' },
-  { text = 'gitsigns toggle_deleted', cmd = 'Gitsigns toggle_deleted' },
+  { text = 'gitsigns toggle_deleted',            cmd = 'Gitsigns toggle_deleted' },
 }
 
 local flog = {
   {
     cmd = 'Flog -date=short',
-    text = [[Flog | A branch viewer Open Flog in a new tab, showing the git branch graph. options: -biset -merges -reflog -reverse -patch -auther= -date= -format= -limit= -max-count= -order= -skip= -grep- -patch-grep- -rev= -path= -open-cmd= -raw-args= --]],
+    text =
+    [[Flog | A branch viewer Open Flog in a new tab, showing the git branch graph. options: -biset -merges -reflog -reverse -patch -auther= -date= -format= -limit= -max-count= -order= -skip= -grep- -patch-grep- -rev= -path= -open-cmd= -raw-args= --]],
   },
   {
     cmd = 'Floggit -date=short',
-    text = 'Floggit | Open a git command via |:Git| using |flog#Exec()|. All arguments supported by |:Git| are supported.',
+    text =
+    'Floggit | Open a git command via |:Git| using |flog#Exec()|. All arguments supported by |:Git| are supported.',
   },
   { cmd = 'Floggit!  -date=short', text = 'Floggit! | Same as |:Floggit|, but use |:Git!|.' },
   {
@@ -182,15 +191,65 @@ local flog = {
   },
   {
     cmd = 'Flogsetargs[!]',
-    text = 'Flogsetargs | Update the arguments passed to |:Flog| or |:Flogsplit|. Can only be run in a |:Flog| window. Merges new arguments with the current arguments. bang to override default arugments',
+    text =
+    'Flogsetargs | Update the arguments passed to |:Flog| or |:Flogsplit|. Can only be run in a |:Flog| window. Merges new arguments with the current arguments. bang to override default arugments',
   },
   {
     cmd = 'Flogsplitcommit',
-    text = 'Flogsplitcommit | Open a commit under the cursor using |:Gsplit| in a |flog-temp-window|. Can only be run in the |:Flog| window.',
+    text =
+    'Flogsplitcommit | Open a commit under the cursor using |:Gsplit| in a |flog-temp-window|. Can only be run in the |:Flog| window.',
   },
 }
+local forgit_subcmds = {
+  'add',
+  'attributes',
+  'blame',
+  'branch_delete',
+  'checkout_branch',
+  'checkout_commit',
+  'checkout_file',
+  'checkout_tag',
+  'cherry_pick',
+  'cherry_pick_from_branch',
+  'clean',
+  'diff',
+  'fixup',
+  'ignore',
+  'log',
+  'reflog',
+  'rebase',
+  'reset_head',
+  'revert_commit',
+  'show',
+  'stash_show',
+  'stash_push',
+}
+local function forgit_float(opts)
+  log(opts)
+  if opts ~= nil then
 
-local function git_cmds()
+    local term = require('forgit.term').run
+    -- if opts is a string of forgit subcommands, call git-forgit with that subcommand
+    if type(opts) == 'table' and #opts >0 and vim.tbl_contains(forgit_subcmds, opts[1]) then
+      local cmd = {_FORGIT_CFG.forgit_cmd, unpack(opts)}
+      term({ cmd = cmd, autoclose = true })
+      return true
+    end
+    if type (opts) == 'string' and vim.tbl_contains(forgit_subcmds, opts) then
+      local cmd = {_FORGIT_CFG.forgit_path, opts}
+      term({ cmd = cmd , autoclose = (opts == 'add')})
+      return true
+    end
+  end
+end
+
+
+local function git_cmds(opts)
+  if opts ~= nil then
+    if forgit_float(opts) then
+      return
+    end
+  end
   local cmdlst = require('forgit.commands').cmds()
 
   local data = {}
@@ -253,8 +312,8 @@ local function git_cmds()
       end
     end,
   })
-  vim.api.nvim_win_set_option(win.win, 'wrap', true)
+  vim.api.nvim_set_option_value('wrap', true, { win = win.win })
 
   -- one command to rule them all
 end
-return { git_cmds = git_cmds }
+return { git_cmds = git_cmds, forgit_subcmds = forgit_subcmds }

@@ -5,7 +5,7 @@ Interactive git commands with fzf.
 An elevator pitch:
 
  * fzf + delta branches, commits, files, diffs, stashes, etc.
- * Get what you want in 2~5 keystrokes from cmd line?
+ * Get what you want in 2~5 keystrokes from cmd line
  * Are you sure your 'p' key bind is `pull` or `push`? Your 'c' key bind is `commit` or `checkout`?
  * Do you stackoverflow the git commands e.g. rebase/stash/pick?
  * Do you feel the integration of git and your setup is not efficient enough?
@@ -56,15 +56,18 @@ Plug 'ray-x/forgit.nvim'
 require'forgit'.setup({
   debug = false, -- enable debug logging default path is ~/.cache/nvim/forgit.log
   diff_pager = 'delta', -- you can use `diff`, `diff-so-fancy`
-  diff_cmd = '', -- you can use `DiffviewOpen`, `Gvdiffsplit` or `!git diff`, auto if not set
+  diff_cmd = 'DiffviewOpen', -- you can use `DiffviewOpen`, `Gvdiffsplit` or `!git diff`, auto if not set
   fugitive = false, -- git fugitive installed?
+  gitsigns = true,  -- integrate with gitsigns.nvim
+  flog = false,  -- integrate with gitsigns.nvim
+  git_fuzzy = false, -- integrate with git-fuzzy
   abbreviate = false, -- abvreviate some of the commands e.g. gps -> git push
   git_alias = true,  -- git command extensions see: Git command alias
   show_result = 'quickfix', -- show cmd result in quickfix or notify
 
   shell_mode = true, -- set to true if you using zsh/bash and can not run forgit commands
-  height_ratio = 0.6, -- height ratio of floating window when split horizontally
-  width_ratio = 0.6, -- width ratio of floating window when split vertically
+  height_ratio = 0.7, -- height ratio of floating window when split horizontally
+  width_ratio = 0.8, -- width ratio of floating window when split vertically
   cmds_list = {} -- additional commands to show in Forgit command list
   --  e.g. cmd_list = {text = 'Gs get_hunks', cmd = 'Gitsigns get_hunks'}
 })
