@@ -54,7 +54,7 @@ function M.internal.parse_hunk(hunk_lines)
   local old_start, old_count, new_start, new_count = header:match("@@ %-(%d+),(%d+) %+(%d+),(%d+) @@")
   old_start, old_count = tonumber(old_start) or 1, tonumber(old_count) or 0
   new_start, new_count = tonumber(new_start) or 1, tonumber(new_count) or 0
-  
+
   -- Store header info
   local hunk_data = {
     header = header,
@@ -66,17 +66,17 @@ function M.internal.parse_hunk(hunk_lines)
     additions = {}, -- Maps positions to added lines
     word_diffs = {} -- Maps positions to word diff lines
   }
-  
+
   -- Process the hunk line by line
   local cur_old = old_start
   local cur_new = new_start
-  
+
   for i = 2, #hunk_lines do
     local line = hunk_lines[i]
     if line == "" then goto continue_parse end
-    
+
     local first_char = line:sub(1, 1)
-    
+
     if first_char == "-" then
       -- Deletion line
       if not hunk_data.deletions[cur_new] then
@@ -112,10 +112,10 @@ function M.internal.parse_hunk(hunk_lines)
       cur_old = cur_old + 1
       cur_new = cur_new + 1
     end
-    
+
     ::continue_parse::
   end
-  
+
   -- Handle end-of-file deletions
   for pos, _ in pairs(hunk_data.deletions) do
     if tonumber(pos) and tonumber(pos) > new_start + new_count - 1 then
@@ -124,26 +124,26 @@ function M.internal.parse_hunk(hunk_lines)
       hunk_data.deletions[pos] = nil
     end
   end
-  
+
   return hunk_data
 end
 
 -- Validate a buffer line for rendering
 function M.internal.validate_buffer_position(bufnr, line, col)
   local buf_line_count = vim.api.nvim_buf_line_count(bufnr)
-  
+
   if line <= 0 or line > buf_line_count then
     return false, string.format("Line %d is out of buffer range (1-%d)", line, buf_line_count)
   end
-  
+
   if col then
     local line_content = vim.api.nvim_buf_get_lines(bufnr, line - 1, line, false)[1] or ""
     if col < 0 or col > #line_content then
-      return false, string.format("Column %d is out of range (0-%d) for line %d", 
+      return false, string.format("Column %d is out of range (0-%d) for line %d",
         col, #line_content, line)
     end
   end
-  
+
   return true, nil
 end
 
@@ -151,7 +151,10 @@ end
 function M.internal.render_deletions(bufnr, hunk_data)
   local buf_line_count = vim.api.nvim_buf_line_count(bufnr)
   local render_count = 0
-  
+
+  -- Get the content of the buffer for context checking
+  local buffer_lines = vim.api.nvim_buf_get_lines(bufnr, 0, buf_line_count, false)
+
   -- Render regular deletions
   for pos, del_lines in pairs(hunk_data.deletions) do
     if pos == "EOF" then
@@ -160,10 +163,10 @@ function M.internal.render_deletions(bufnr, hunk_data)
       for _, line in ipairs(del_lines) do
         table.insert(virt_lines, {{line, "DiffDelete"}})
       end
-      
+
       -- Place at the very end of the buffer
       local end_line = math.max(0, buf_line_count - 1)
-      
+
       -- Place the virtual lines BELOW (not above) the last line
       vim.api.nvim_buf_set_extmark(bufnr, ns_id, end_line, 0, {
         virt_lines = virt_lines,
@@ -176,20 +179,34 @@ function M.internal.render_deletions(bufnr, hunk_data)
       for _, line in ipairs(del_lines) do
         table.insert(virt_lines, {{line, "DiffDelete"}})
       end
-      
+
       -- Calculate safe position (bounded to actual buffer)
       local target_line = math.min(tonumber(pos) - 1, buf_line_count - 1)
       target_line = math.max(target_line, 0)
-      
+
+      -- Check context to determine if we should place above or below
+      local place_above = true
+
+      -- Get the line at the target position
+      local line_content = buffer_lines[target_line + 1] or ""
+
+      -- If this line is a function declaration or an opening brace, place below
+      if line_content:match("^%s*func%s+") or line_content:match("%{%s*$") then
+        place_above = false
+        log(string.format("Placing deletions AFTER the function declaration at line %d", target_line + 1))
+      else
+        log(string.format("Placing deletions BEFORE line %d", target_line + 1))
+      end
+
       -- Place the virtual lines
       vim.api.nvim_buf_set_extmark(bufnr, ns_id, target_line, 0, {
         virt_lines = virt_lines,
-        virt_lines_above = true,
+        virt_lines_above = place_above,
       })
       render_count = render_count + #del_lines
     end
   end
-  
+
   return render_count
 end
 
@@ -198,16 +215,16 @@ function M.internal.render_additions(bufnr, hunk_data)
   local buf_line_count = vim.api.nvim_buf_line_count(bufnr)
   local buffer_lines = vim.api.nvim_buf_get_lines(bufnr, 0, buf_line_count, false)
   local render_count = 0
-  
+
   for pos, content in pairs(hunk_data.additions) do
     -- Only continue if the position is valid in the buffer
     if pos > buf_line_count then
       goto continue_add
     end
-    
+
     -- Pure addition - check if it matches the current content in the buffer
     local buffer_line = buffer_lines[pos]
-    
+
     if buffer_line == content then
       -- This is a pure addition - highlight the entire line
       vim.api.nvim_buf_set_extmark(bufnr, ns_id, pos - 1, 0, {
@@ -215,10 +232,10 @@ function M.internal.render_additions(bufnr, hunk_data)
       })
       render_count = render_count + 1
     end
-    
+
     ::continue_add::
   end
-  
+
   return render_count
 end
 
@@ -226,20 +243,20 @@ end
 function M.internal.render_word_diffs(bufnr, hunk_data)
   local buf_line_count = vim.api.nvim_buf_line_count(bufnr)
   local render_count = 0
-  
+
   for pos, content in pairs(hunk_data.word_diffs) do
     -- Only continue if the position is valid in the buffer
     if pos > buf_line_count then
       goto continue_word
     end
-    
+
     -- Process word-level changes
     M.inline_diff_highlight(bufnr, pos, content)
     render_count = render_count + 1
-    
+
     ::continue_word::
   end
-  
+
   return render_count
 end
 
@@ -247,26 +264,26 @@ end
 function M.render_hunk(hunk)
   local bufnr = hunk.bufnr
   local hunk_lines = hunk.user_data.hunk
-  
-  -- Clear previous highlights 
+
+  -- Clear previous highlights
   vim.api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
-  
+
   -- Parse the hunk into a structured format
   local hunk_data = M.internal.parse_hunk(hunk_lines)
-  
-  log(string.format("Processing hunk: %s (old: %d-%d, new: %d-%d)", 
-    hunk_data.header, 
-    hunk_data.old_start, hunk_data.old_start + hunk_data.old_count - 1, 
+
+  log(string.format("Processing hunk: %s (old: %d-%d, new: %d-%d)",
+    hunk_data.header,
+    hunk_data.old_start, hunk_data.old_start + hunk_data.old_count - 1,
     hunk_data.new_start, hunk_data.new_start + hunk_data.new_count - 1))
-  
+
   -- Render all elements
   local del_count = M.internal.render_deletions(bufnr, hunk_data)
   local add_count = M.internal.render_additions(bufnr, hunk_data)
   local word_count = M.internal.render_word_diffs(bufnr, hunk_data)
-  
-  log(string.format("Rendered %d deletions, %d additions, %d word diffs", 
+
+  log(string.format("Rendered %d deletions, %d additions, %d word diffs",
     del_count, add_count, word_count))
-  
+
   return del_count + add_count + word_count -- Return total changes for testing
 end
 
@@ -274,13 +291,13 @@ end
 function M.test_hunk_render(hunk_lines, buffer_lines)
   -- Create a scratch buffer for testing
   local bufnr = vim.api.nvim_create_buf(false, true)
-  
+
   -- Set up buffer content
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, buffer_lines)
-  
+
   -- Parse and render the hunk
   local hunk_data = M.internal.parse_hunk(hunk_lines)
-  
+
   -- Create a mock hunk entry
   local mock_hunk = {
     bufnr = bufnr,
@@ -288,16 +305,16 @@ function M.test_hunk_render(hunk_lines, buffer_lines)
       hunk = hunk_lines
     }
   }
-  
+
   -- Render and get counts
   local result = M.render_hunk(mock_hunk)
-  
+
   -- Collect all extmarks for verification
   local extmarks = vim.api.nvim_buf_get_extmarks(bufnr, ns_id, 0, -1, {details = true})
-  
+
   -- Clean up
   vim.api.nvim_buf_delete(bufnr, {force = true})
-  
+
   -- Return results for test verification
   return {
     hunk_data = hunk_data,
@@ -439,19 +456,64 @@ end
 function M.run_git_diff(target_branch, opts)
   opts = opts or {}
   local current_buf = vim.api.nvim_get_current_buf()
-  local current_file = vim.api.nvim_buf_get_name(current_buf)
 
-  if current_file == "" then
-    vim.notify("Cannot diff an unnamed buffer", vim.log.levels.ERROR)
-    return
+  -- Determine which files to diff
+  local files = {}
+  local diff_all = false
+
+  if opts.files and #opts.files > 0 then
+    -- Process specific files
+    for _, file in ipairs(opts.files) do
+      if file == "%" then
+        local current_file = vim.api.nvim_buf_get_name(current_buf)
+        if current_file == "" then
+          vim.notify("Cannot diff an unnamed buffer with '%'", vim.log.levels.ERROR)
+          return
+        end
+        table.insert(files, current_file)
+      elseif file ~= "" then  -- Skip empty strings
+        table.insert(files, file)
+      end
+    end
+  else
+    -- Default to current file if no files specified
+    local current_file = vim.api.nvim_buf_get_name(current_buf)
+    if current_file == "" then
+      -- For unnamed buffers, diff all tracked files
+      diff_all = true
+      log("Unnamed buffer or no files specified - diffing all tracked files")
+    else
+      table.insert(files, current_file)
+    end
   end
 
-  -- Clear previous diff highlights
+  -- Clear previous diff highlights for the current buffer
   clear_diff_highlights(current_buf)
 
-  vim.system({
-    "git", "--no-pager", "diff", target_branch, "--word-diff=plain", "--diff-algorithm=myers", "--", current_file
-  }, { text = true }, function(res)
+  -- Prepare the git command
+  local git_cmd = {"git", "--no-pager", "diff"}
+
+  -- Add target if specified and not empty
+  if target_branch and target_branch ~= "" then
+    table.insert(git_cmd, target_branch)
+  end
+
+  -- Add other options
+  table.insert(git_cmd, "--word-diff=plain")
+  table.insert(git_cmd, "--diff-algorithm=myers")
+
+  -- Add files if specified (but not for diff_all)
+  if not diff_all and #files > 0 then
+    table.insert(git_cmd, "--")
+    for _, file in ipairs(files) do
+      table.insert(git_cmd, file)
+    end
+  end
+
+  log("Running git command: " .. table.concat(git_cmd, " "))
+
+  -- Run the git diff command
+  vim.system(git_cmd, { text = true }, function(res)
     if res.code ~= 0 then
       return vim.schedule(function()
         vim.notify("GitDiff failed: " .. res.stderr, vim.log.levels.ERROR)
@@ -530,10 +592,20 @@ function M.run_git_diff(target_branch, opts)
       end
     end
 
+    -- Just update the title to show which branch and files were compared
+    local file_info = ""
+    if #files == 1 then
+      file_info = " " .. vim.fn.fnamemodify(files[1], ":~:.")
+    elseif #files > 1 then
+      file_info = " (" .. #files .. " files)"
+    end
+
+    local title = "GitDiff: " .. (target_branch or '') .. file_info
+
     -- Render all hunks and populate quickfix
     vim.schedule(function()
       vim.fn.setqflist({}, " ", {
-        title = "GitDiff: " .. target_branch,
+        title = title,
         items = qf_items,
       })
       vim.cmd("copen")
@@ -674,15 +746,54 @@ end
 
 -- Set up user commands and autocommands
 function M.setup()
-  vim.api.nvim_create_user_command('GitDiff', function(opts)
-    if opts.args == '' then
-      vim.notify('Usage: :GitDiff <branch>', vim.log.levels.WARN)
-      return
+  -- Parse command arguments to handle file specifications
+  local function parse_args(args)
+    local target_branch = nil
+    local files = {}
+    local parts = vim.split(args, "%s+")
+
+    local i = 1
+    while i <= #parts do
+      local part = parts[i]
+
+      -- Check for file specifier
+      if part == "--" then
+        -- Everything after -- is a file
+        for j = i + 1, #parts do
+          table.insert(files, parts[j])
+        end
+        break
+      elseif part == "%" then
+        -- Current file
+        table.insert(files, "%")
+      elseif not target_branch and part ~= "" then
+        -- First non-special argument is target branch
+        target_branch = part
+      else
+        -- Additional arguments might be file patterns
+        table.insert(files, part)
+      end
+
+      i = i + 1
     end
-    M.run_git_diff(opts.args)
+
+    return {
+      target = target_branch,
+      files = #files > 0 and files or nil
+    }
+  end
+
+  vim.api.nvim_create_user_command('GitDiff', function(opts)
+    local parsed = parse_args(opts.args)
+    -- No default value - let git diff use its default behavior
+    local target = parsed.target
+
+    -- Run git diff with parsed arguments
+    M.run_git_diff(target, {files = parsed.files})
   end, {
-    nargs = 1,
+    nargs = "*",
     complete = branch_complete,
+    desc = "Show git diff with optional branch and file arguments"
   })
 
   vim.api.nvim_create_user_command('GitDiffClear', function()
