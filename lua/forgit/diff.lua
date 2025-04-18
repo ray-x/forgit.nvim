@@ -43,74 +43,68 @@ M.branches = {}
 local function clear_diff_highlights(bufnr)
   vim.api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
 end
-function M.render_hunk(hunk)
-  local bufnr = hunk.bufnr
-  local hunk_lines = hunk.user_data.hunk
 
-  -- Clear previous highlights
-  vim.api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
+-- Create a testable module structure
+M.internal = {}  -- For test access to internal functions
 
-  -- Parse hunk header for position info
+-- Parse a git diff hunk into a structured representation
+function M.internal.parse_hunk(hunk_lines)
+  -- Extract header information
   local header = hunk_lines[1]
   local old_start, old_count, new_start, new_count = header:match("@@ %-(%d+),(%d+) %+(%d+),(%d+) @@")
   old_start, old_count = tonumber(old_start) or 1, tonumber(old_count) or 0
   new_start, new_count = tonumber(new_start) or 1, tonumber(new_count) or 0
-
-  log(string.format("Processing hunk: %s (old: %d-%d, new: %d-%d)",
-    header, old_start, old_start + old_count - 1, new_start, new_start + new_count - 1))
-
-  -- Get the actual buffer content
-  local buf_line_count = vim.api.nvim_buf_line_count(bufnr)
-  local buffer_lines = vim.api.nvim_buf_get_lines(bufnr, 0, buf_line_count, false)
-
-  -- Track all additions and deletions with their positions
-  local deletions = {}  -- Maps positions to deleted lines
-  local additions = {}  -- Maps positions to added lines
-
-  -- Current positions while processing the diff
+  
+  -- Store header info
+  local hunk_data = {
+    header = header,
+    old_start = old_start,
+    old_count = old_count,
+    new_start = new_start,
+    new_count = new_count,
+    deletions = {}, -- Maps positions to deleted lines
+    additions = {}, -- Maps positions to added lines
+    word_diffs = {} -- Maps positions to word diff lines
+  }
+  
+  -- Process the hunk line by line
   local cur_old = old_start
   local cur_new = new_start
-
-  -- Process each line in the hunk
+  
   for i = 2, #hunk_lines do
     local line = hunk_lines[i]
-    if line == "" then goto continue_scan end
-
+    if line == "" then goto continue_parse end
+    
     local first_char = line:sub(1, 1)
-
+    
     if first_char == "-" then
       -- Deletion line
-      if not deletions[cur_new] then
-        deletions[cur_new] = {}
+      if not hunk_data.deletions[cur_new] then
+        hunk_data.deletions[cur_new] = {}
       end
-      table.insert(deletions[cur_new], line:sub(2))
-      log(string.format("Marking deletion at position %d: %s", cur_new, line:sub(2)))
+      table.insert(hunk_data.deletions[cur_new], line:sub(2))
       cur_old = cur_old + 1
       -- Do NOT increment cur_new for deletions
     elseif first_char == "+" then
       -- Addition line
-      additions[cur_new] = line:sub(2)
-      log(string.format("Marking addition at position %d: %s", cur_new, line:sub(2)))
+      hunk_data.additions[cur_new] = line:sub(2)
       cur_new = cur_new + 1
-    elseif line:match("^%{%+.*%+%}$") then
+    elseif line:match("^%s*%{%+.*%+%}$") then
       -- Special case: word diff that's a complete line addition
       local content = line:match("%{%+(.-)%+%}")
-      additions[cur_new] = content
-      log(string.format("Marking word-diff addition at position %d: %s", cur_new, content))
+      hunk_data.additions[cur_new] = content
       cur_new = cur_new + 1
-    elseif line:match("^%[%-.*%-%]$") then
+    elseif line:match("^%s*%[%-.*%-%]$") then
       -- Special case: word diff that's a complete line deletion
       local content = line:match("%[%-(.-)%-%]")
-      if not deletions[cur_new] then
-        deletions[cur_new] = {}
+      if not hunk_data.deletions[cur_new] then
+        hunk_data.deletions[cur_new] = {}
       end
-      table.insert(deletions[cur_new], content)
-      log(string.format("Marking word-diff deletion at position %d: %s", cur_new, content))
+      table.insert(hunk_data.deletions[cur_new], content)
       cur_old = cur_old + 1
     elseif line:find("%[%-.-%-%]") or line:find("%{%+.-%+%}") then
       -- Mixed word diff line
-      log(string.format("Marking word-diff at position %d: %s", cur_new, line))
-      additions[cur_new] = line  -- Store for inline highlighting
+      hunk_data.word_diffs[cur_new] = line
       cur_old = cur_old + 1
       cur_new = cur_new + 1
     else
@@ -118,90 +112,162 @@ function M.render_hunk(hunk)
       cur_old = cur_old + 1
       cur_new = cur_new + 1
     end
-
-    ::continue_scan::
+    
+    ::continue_parse::
   end
-
-  -- Handle end-of-file additions/deletions
-  for pos, _ in pairs(deletions) do
+  
+  -- Handle end-of-file deletions
+  for pos, _ in pairs(hunk_data.deletions) do
     if tonumber(pos) and tonumber(pos) > new_start + new_count - 1 then
       -- Move to EOF section
-      deletions["EOF"] = deletions[pos]
-      deletions[pos] = nil
-      log(string.format("Moving deletion at position %d to EOF", pos))
+      hunk_data.deletions["EOF"] = hunk_data.deletions[pos]
+      hunk_data.deletions[pos] = nil
     end
   end
+  
+  return hunk_data
+end
 
-  -- Render deletions
-  for pos, del_lines in pairs(deletions) do
+-- Validate a buffer line for rendering
+function M.internal.validate_buffer_position(bufnr, line, col)
+  local buf_line_count = vim.api.nvim_buf_line_count(bufnr)
+  
+  if line <= 0 or line > buf_line_count then
+    return false, string.format("Line %d is out of buffer range (1-%d)", line, buf_line_count)
+  end
+  
+  if col then
+    local line_content = vim.api.nvim_buf_get_lines(bufnr, line - 1, line, false)[1] or ""
+    if col < 0 or col > #line_content then
+      return false, string.format("Column %d is out of range (0-%d) for line %d", 
+        col, #line_content, line)
+    end
+  end
+  
+  return true, nil
+end
+
+-- Render deletions from parsed hunk data
+function M.internal.render_deletions(bufnr, hunk_data)
+  local buf_line_count = vim.api.nvim_buf_line_count(bufnr)
+  local render_count = 0
+  
+  -- Render regular deletions
+  for pos, del_lines in pairs(hunk_data.deletions) do
     if pos == "EOF" then
       -- Handle EOF deletions
       local virt_lines = {}
       for _, line in ipairs(del_lines) do
         table.insert(virt_lines, {{line, "DiffDelete"}})
       end
-
+      
       -- Place at the very end of the buffer
       local end_line = math.max(0, buf_line_count - 1)
-
-      log(string.format("Rendering %d EOF deletion(s) after the last line (buffer line %d)",
-        #del_lines, end_line + 1))
-
+      
       -- Place the virtual lines BELOW (not above) the last line
       vim.api.nvim_buf_set_extmark(bufnr, ns_id, end_line, 0, {
         virt_lines = virt_lines,
         virt_lines_above = false,
       })
+      render_count = render_count + #del_lines
     else
       -- Normal deletions
       local virt_lines = {}
       for _, line in ipairs(del_lines) do
         table.insert(virt_lines, {{line, "DiffDelete"}})
       end
-
+      
       -- Calculate safe position (bounded to actual buffer)
       local target_line = math.min(tonumber(pos) - 1, buf_line_count - 1)
       target_line = math.max(target_line, 0)
-
-      log(string.format("Rendering %d deletion(s) at position %d (buffer line %d)",
-        #del_lines, pos, target_line + 1))
-
+      
       -- Place the virtual lines
       vim.api.nvim_buf_set_extmark(bufnr, ns_id, target_line, 0, {
         virt_lines = virt_lines,
         virt_lines_above = true,
       })
+      render_count = render_count + #del_lines
     end
   end
+  
+  return render_count
+end
 
-  -- Render additions and word-diffs
-  for pos, content in pairs(additions) do
+-- Render additions from parsed hunk data
+function M.internal.render_additions(bufnr, hunk_data)
+  local buf_line_count = vim.api.nvim_buf_line_count(bufnr)
+  local buffer_lines = vim.api.nvim_buf_get_lines(bufnr, 0, buf_line_count, false)
+  local render_count = 0
+  
+  for pos, content in pairs(hunk_data.additions) do
     -- Only continue if the position is valid in the buffer
     if pos > buf_line_count then
-      log(string.format("Skipping addition at position %d - beyond buffer end", pos))
-      goto continue_addition
+      goto continue_add
     end
-
-    -- Check if this is a word diff line
-    if type(content) == "string" and (content:find("%[%-.-%-%]") or content:find("%{%+.-%+%}")) then
-      -- Process word-level changes
-      log(string.format("Processing word diff at position %d: %s", pos, content))
-      M.inline_diff_highlight(bufnr, pos, content)
-    else
-      -- Pure addition - check if it matches the current content in the buffer
-      local buffer_line = buffer_lines[pos]
-
-      if buffer_line == content then
-        -- This is a pure addition - highlight the entire line
-        log(string.format("Highlighting addition at position %d: %s", pos, content))
-        vim.api.nvim_buf_set_extmark(bufnr, ns_id, pos - 1, 0, {
-          line_hl_group = "DiffAdd",
-        })
-      end
+    
+    -- Pure addition - check if it matches the current content in the buffer
+    local buffer_line = buffer_lines[pos]
+    
+    if buffer_line == content then
+      -- This is a pure addition - highlight the entire line
+      vim.api.nvim_buf_set_extmark(bufnr, ns_id, pos - 1, 0, {
+        line_hl_group = "DiffAdd",
+      })
+      render_count = render_count + 1
     end
-
-    ::continue_addition::
+    
+    ::continue_add::
   end
+  
+  return render_count
+end
+
+-- Render word diffs from parsed hunk data
+function M.internal.render_word_diffs(bufnr, hunk_data)
+  local buf_line_count = vim.api.nvim_buf_line_count(bufnr)
+  local render_count = 0
+  
+  for pos, content in pairs(hunk_data.word_diffs) do
+    -- Only continue if the position is valid in the buffer
+    if pos > buf_line_count then
+      goto continue_word
+    end
+    
+    -- Process word-level changes
+    M.inline_diff_highlight(bufnr, pos, content)
+    render_count = render_count + 1
+    
+    ::continue_word::
+  end
+  
+  return render_count
+end
+
+-- Refactored render_hunk function that uses the new structure
+function M.render_hunk(hunk)
+  local bufnr = hunk.bufnr
+  local hunk_lines = hunk.user_data.hunk
+  
+  -- Clear previous highlights 
+  vim.api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
+  
+  -- Parse the hunk into a structured format
+  local hunk_data = M.internal.parse_hunk(hunk_lines)
+  
+  log(string.format("Processing hunk: %s (old: %d-%d, new: %d-%d)", 
+    hunk_data.header, 
+    hunk_data.old_start, hunk_data.old_start + hunk_data.old_count - 1, 
+    hunk_data.new_start, hunk_data.new_start + hunk_data.new_count - 1))
+  
+  -- Render all elements
+  local del_count = M.internal.render_deletions(bufnr, hunk_data)
+  local add_count = M.internal.render_additions(bufnr, hunk_data)
+  local word_count = M.internal.render_word_diffs(bufnr, hunk_data)
+  
+  log(string.format("Rendered %d deletions, %d additions, %d word diffs", 
+    del_count, add_count, word_count))
+  
+  return del_count + add_count + word_count -- Return total changes for testing
 end
 
 function M.inline_diff_highlight(bufnr, current_line, line)
@@ -296,7 +362,7 @@ function M.inline_diff_highlight(bufnr, current_line, line)
       pos = del_end + 1
 
     -- Handle standalone addition: {+added+}
-    elseif line:find("%{%+.-%+%}", pos) == pos then
+    elseif line:find("%s%{%+.-%+%}", pos) == pos then
       local add_start, add_end = line:find("%{%+.-%+%}", pos)
       local added = line:sub(add_start + 2, add_end - 2)
 
