@@ -43,52 +43,13 @@ function M.render_hunk(hunk)
   local buf_line_count = vim.api.nvim_buf_line_count(bufnr)
   local buffer_lines = vim.api.nvim_buf_get_lines(bufnr, 0, buf_line_count, false)
   
-  -- Get a map of actual lines in the current buffer
-  local buffer_content_map = {}
-  for i, line in ipairs(buffer_lines) do
-    buffer_content_map[i] = line
-  end
-  
-  -- Process the diff
-  -- We need to map between new file line numbers and new file content
-  local new_line_map = {}  -- Maps new file line numbers to actual content
+  -- Track all additions and deletions with their positions
+  local deletions = {}  -- Maps positions to deleted lines
+  local additions = {}  -- Maps positions to added lines
   
   -- Current positions while processing the diff
   local cur_old = old_start
   local cur_new = new_start
-  
-  -- First, gather information about deletions
-  local deletions = {}  -- Maps new file positions to deleted lines
-  
-  -- Helper to add a deletion at the current position
-  local function add_deletion(content)
-    -- Special handling for end-of-file deletions
-    local target_pos = cur_new
-    
-    -- If we're at the end of the file, mark it for special handling
-    if target_pos > new_start + new_count - 1 then
-      log(string.format("End-of-file deletion detected at position %d (file has only %d lines)", 
-        target_pos, new_start + new_count - 1))
-      -- Use a special "EOF" marker in the position
-      target_pos = "EOF"
-    end
-    
-    if target_pos == "EOF" then
-      -- For EOF deletions, always put them after the last line
-      if not deletions["EOF"] then
-        deletions["EOF"] = {}
-      end
-      table.insert(deletions["EOF"], content)
-      log(string.format("Marking EOF deletion: %s", content))
-    else
-      -- Normal deletion
-      if not deletions[target_pos] then
-        deletions[target_pos] = {}
-      end
-      table.insert(deletions[target_pos], content)
-      log(string.format("Marking deletion at new file position %d: %s", target_pos, content))
-    end
-  end
   
   -- Process each line in the hunk
   for i = 2, #hunk_lines do
@@ -99,34 +60,41 @@ function M.render_hunk(hunk)
     
     if first_char == "-" then
       -- Deletion line
-      add_deletion(line:sub(2))
+      if not deletions[cur_new] then
+        deletions[cur_new] = {}
+      end
+      table.insert(deletions[cur_new], line:sub(2))
+      log(string.format("Marking deletion at position %d: %s", cur_new, line:sub(2)))
       cur_old = cur_old + 1
       -- Do NOT increment cur_new for deletions
     elseif first_char == "+" then
       -- Addition line
-      new_line_map[cur_new] = line:sub(2)
-      cur_old = cur_old  -- No change to old file position
+      additions[cur_new] = line:sub(2)
+      log(string.format("Marking addition at position %d: %s", cur_new, line:sub(2)))
+      cur_new = cur_new + 1
+    elseif line:match("^%{%+.*%+%}$") then
+      -- Special case: word diff that's a complete line addition
+      local content = line:match("%{%+(.-)%+%}")
+      additions[cur_new] = content
+      log(string.format("Marking word-diff addition at position %d: %s", cur_new, content))
       cur_new = cur_new + 1
     elseif line:match("^%[%-.*%-%]$") then
       -- Special case: word diff that's a complete line deletion
       local content = line:match("%[%-(.-)%-%]")
-      add_deletion(content)
+      if not deletions[cur_new] then
+        deletions[cur_new] = {}
+      end
+      table.insert(deletions[cur_new], content)
+      log(string.format("Marking word-diff deletion at position %d: %s", cur_new, content))
       cur_old = cur_old + 1
-      -- Do NOT increment cur_new for deletions
-    elseif line:match("^%{%+.*%+%}$") then
-      -- Special case: word diff that's a complete line addition
-      local content = line:match("%{%+(.-)%+%}")
-      new_line_map[cur_new] = content
-      cur_old = cur_old  -- No change to old file position
-      cur_new = cur_new + 1
     elseif line:find("%[%-.-%-%]") or line:find("%{%+.-%+%}") then
-      -- Word diff (mixed changes)
-      new_line_map[cur_new] = line
+      -- Mixed word diff line
+      log(string.format("Marking word-diff at position %d: %s", cur_new, line))
+      additions[cur_new] = line  -- Store for inline highlighting
       cur_old = cur_old + 1
       cur_new = cur_new + 1
     else
       -- Context line (unchanged)
-      new_line_map[cur_new] = line
       cur_old = cur_old + 1
       cur_new = cur_new + 1
     end
@@ -134,97 +102,85 @@ function M.render_hunk(hunk)
     ::continue_scan::
   end
   
-  -- Log our findings
-  log("Deletions by position:")
+  -- Handle end-of-file additions/deletions
+  for pos, _ in pairs(deletions) do
+    if tonumber(pos) and tonumber(pos) > new_start + new_count - 1 then
+      -- Move to EOF section
+      deletions["EOF"] = deletions[pos]
+      deletions[pos] = nil
+      log(string.format("Moving deletion at position %d to EOF", pos))
+    end
+  end
+  
+  -- Render deletions
   for pos, del_lines in pairs(deletions) do
-    log(string.format("  Position %s: %d lines", tostring(pos), #del_lines))
-    for i, line in ipairs(del_lines) do
-      log(string.format("    [%d] %s", i, line))
+    if pos == "EOF" then
+      -- Handle EOF deletions
+      local virt_lines = {}
+      for _, line in ipairs(del_lines) do
+        table.insert(virt_lines, {{line, "DiffDelete"}})
+      end
+      
+      -- Place at the very end of the buffer
+      local end_line = math.max(0, buf_line_count - 1)
+      
+      log(string.format("Rendering %d EOF deletion(s) after the last line (buffer line %d)", 
+        #del_lines, end_line + 1))
+      
+      -- Place the virtual lines BELOW (not above) the last line
+      vim.api.nvim_buf_set_extmark(bufnr, ns_id, end_line, 0, {
+        virt_lines = virt_lines,
+        virt_lines_above = false,
+      })
+    else
+      -- Normal deletions
+      local virt_lines = {}
+      for _, line in ipairs(del_lines) do
+        table.insert(virt_lines, {{line, "DiffDelete"}})
+      end
+      
+      -- Calculate safe position (bounded to actual buffer)
+      local target_line = math.min(tonumber(pos) - 1, buf_line_count - 1)
+      target_line = math.max(target_line, 0)
+      
+      log(string.format("Rendering %d deletion(s) at position %d (buffer line %d)", 
+        #del_lines, pos, target_line + 1))
+      
+      -- Place the virtual lines
+      vim.api.nvim_buf_set_extmark(bufnr, ns_id, target_line, 0, {
+        virt_lines = virt_lines,
+        virt_lines_above = true,
+      })
     end
   end
   
-  -- Render normal deletions as virtual lines
-  for pos, del_lines in pairs(deletions) do
-    -- Skip EOF deletions - we'll handle those separately
-    if pos == "EOF" then goto continue_render end
-    
-    -- Convert to virtual lines format
-    local virt_lines = {}
-    for _, line in ipairs(del_lines) do
-      table.insert(virt_lines, {{line, "DiffDelete"}})
+  -- Render additions and word-diffs
+  for pos, content in pairs(additions) do
+    -- Only continue if the position is valid in the buffer
+    if pos > buf_line_count then
+      log(string.format("Skipping addition at position %d - beyond buffer end", pos))
+      goto continue_addition
     end
-    
-    -- Calculate safe position (bounded to actual buffer)
-    local target_line = math.min(tonumber(pos) - 1, buf_line_count - 1)
-    target_line = math.max(target_line, 0)
-    
-    log(string.format("Rendering %d deletion(s) at new file line %s (buffer line %d)", 
-      #del_lines, tostring(pos), target_line + 1))
-    
-    -- Place the virtual lines
-    vim.api.nvim_buf_set_extmark(bufnr, ns_id, target_line, 0, {
-      virt_lines = virt_lines,
-      virt_lines_above = true,
-    })
-    
-    ::continue_render::
-  end
-  
-  -- Handle EOF deletions separately - always put at the end of the file
-  if deletions["EOF"] then
-    local virt_lines = {}
-    for _, line in ipairs(deletions["EOF"]) do
-      table.insert(virt_lines, {{line, "DiffDelete"}})
-    end
-    
-    -- Place at the very end of the buffer
-    local end_line = math.max(0, buf_line_count - 1)
-    
-    log(string.format("Rendering %d EOF deletion(s) after the last line (buffer line %d)", 
-      #deletions["EOF"], end_line + 1))
-    
-    -- Place the virtual lines BELOW (not above) the last line
-    vim.api.nvim_buf_set_extmark(bufnr, ns_id, end_line, 0, {
-      virt_lines = virt_lines,
-      virt_lines_above = false, -- This is the key difference - show below
-    })
-  end
-  
-  -- Render additions and word diffs
-  for pos, content in pairs(new_line_map) do
-    -- Skip positions beyond the buffer
-    if pos > buf_line_count then goto continue_render2 end
     
     -- Check if this is a word diff line
-    if content:find("%[%-.-%-%]") or content:find("%{%+.-%+%}") then
+    if type(content) == "string" and (content:find("%[%-.-%-%]") or content:find("%{%+.-%+%}")) then
       -- Process word-level changes
-      log(string.format("Processing word diff at line %d: %s", pos, content))
+      log(string.format("Processing word diff at position %d: %s", pos, content))
       M.inline_diff_highlight(bufnr, pos, content)
     else
-      -- Check if this line was added (by looking for it in the buffer)
-      local actual_line = buffer_lines[pos]
-      if actual_line == content then
-        -- Line exists unchanged in buffer - check if it's part of the additions
-        local is_addition = false
-        for i = 2, #hunk_lines do
-          local line = hunk_lines[i]
-          if line:sub(1, 1) == "+" and line:sub(2) == content then
-            is_addition = true
-            break
-          end
-        end
-        
-        if is_addition then
-          -- Highlight as addition
-          log(string.format("Highlighting addition at line %d", pos))
-          vim.api.nvim_buf_set_extmark(bufnr, ns_id, pos - 1, 0, {
-            line_hl_group = "DiffAdd",
-          })
-        end
+      -- Pure addition - check if it matches the current content in the buffer
+      local buffer_line = buffer_lines[pos]
+      
+      if buffer_line == content then
+        -- This is a pure addition - highlight the entire line
+        log(string.format("Highlighting addition at position %d: %s", pos, content))
+        vim.api.nvim_buf_set_extmark(bufnr, ns_id, pos - 1, 0, {
+          line_hl_group = "DiffAdd",
+        })
       end
     end
     
-    ::continue_render2::
+    ::continue_addition::
   end
 end
 
