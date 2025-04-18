@@ -270,6 +270,42 @@ function M.render_hunk(hunk)
   return del_count + add_count + word_count -- Return total changes for testing
 end
 
+-- Test helper that can be used in unit tests
+function M.test_hunk_render(hunk_lines, buffer_lines)
+  -- Create a scratch buffer for testing
+  local bufnr = vim.api.nvim_create_buf(false, true)
+  
+  -- Set up buffer content
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, buffer_lines)
+  
+  -- Parse and render the hunk
+  local hunk_data = M.internal.parse_hunk(hunk_lines)
+  
+  -- Create a mock hunk entry
+  local mock_hunk = {
+    bufnr = bufnr,
+    user_data = {
+      hunk = hunk_lines
+    }
+  }
+  
+  -- Render and get counts
+  local result = M.render_hunk(mock_hunk)
+  
+  -- Collect all extmarks for verification
+  local extmarks = vim.api.nvim_buf_get_extmarks(bufnr, ns_id, 0, -1, {details = true})
+  
+  -- Clean up
+  vim.api.nvim_buf_delete(bufnr, {force = true})
+  
+  -- Return results for test verification
+  return {
+    hunk_data = hunk_data,
+    render_count = result,
+    extmarks = extmarks
+  }
+end
+
 function M.inline_diff_highlight(bufnr, current_line, line)
   log("Inline diff at line " .. current_line .. ": " .. line)
 
