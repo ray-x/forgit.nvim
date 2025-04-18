@@ -14,10 +14,30 @@ local function split_lines(s)
   return t
 end
 
+
 -- Get all git branches for command completion
 local function branch_complete()
-  return table.concat(vim.fn.systemlist("git branch --format='%(refname:short)'"), '\n')
+  if #M.branches > 0 then
+    return M.branches
+  end
+  local branches = {}
+  vim.system({ "git", "branch", "--list" }, { text = true }, function(res)
+    if res.code ~= 0 then
+      vim.notify("Failed to get branches: " .. tostring(res.code) .. tostring(res.stderr), vim.log.levels.WARN)
+      return branches
+    end
+    for _, line in ipairs(split_lines(res.stdout)) do
+      local branch = line:match("^%s*%*?%s*(.+)$")
+      if branch then
+        table.insert(branches, branch)
+      end
+    end
+    M.branches = branches
+  end)
+  return branches
 end
+
+M.branches = {}
 
 -- Clear all extmarks in a buffer
 local function clear_diff_highlights(bufnr)
@@ -26,38 +46,38 @@ end
 function M.render_hunk(hunk)
   local bufnr = hunk.bufnr
   local hunk_lines = hunk.user_data.hunk
-  
-  -- Clear previous highlights 
+
+  -- Clear previous highlights
   vim.api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
-  
+
   -- Parse hunk header for position info
   local header = hunk_lines[1]
   local old_start, old_count, new_start, new_count = header:match("@@ %-(%d+),(%d+) %+(%d+),(%d+) @@")
   old_start, old_count = tonumber(old_start) or 1, tonumber(old_count) or 0
   new_start, new_count = tonumber(new_start) or 1, tonumber(new_count) or 0
-  
-  log(string.format("Processing hunk: %s (old: %d-%d, new: %d-%d)", 
+
+  log(string.format("Processing hunk: %s (old: %d-%d, new: %d-%d)",
     header, old_start, old_start + old_count - 1, new_start, new_start + new_count - 1))
-  
+
   -- Get the actual buffer content
   local buf_line_count = vim.api.nvim_buf_line_count(bufnr)
   local buffer_lines = vim.api.nvim_buf_get_lines(bufnr, 0, buf_line_count, false)
-  
+
   -- Track all additions and deletions with their positions
   local deletions = {}  -- Maps positions to deleted lines
   local additions = {}  -- Maps positions to added lines
-  
+
   -- Current positions while processing the diff
   local cur_old = old_start
   local cur_new = new_start
-  
+
   -- Process each line in the hunk
   for i = 2, #hunk_lines do
     local line = hunk_lines[i]
     if line == "" then goto continue_scan end
-    
+
     local first_char = line:sub(1, 1)
-    
+
     if first_char == "-" then
       -- Deletion line
       if not deletions[cur_new] then
@@ -98,10 +118,10 @@ function M.render_hunk(hunk)
       cur_old = cur_old + 1
       cur_new = cur_new + 1
     end
-    
+
     ::continue_scan::
   end
-  
+
   -- Handle end-of-file additions/deletions
   for pos, _ in pairs(deletions) do
     if tonumber(pos) and tonumber(pos) > new_start + new_count - 1 then
@@ -111,7 +131,7 @@ function M.render_hunk(hunk)
       log(string.format("Moving deletion at position %d to EOF", pos))
     end
   end
-  
+
   -- Render deletions
   for pos, del_lines in pairs(deletions) do
     if pos == "EOF" then
@@ -120,13 +140,13 @@ function M.render_hunk(hunk)
       for _, line in ipairs(del_lines) do
         table.insert(virt_lines, {{line, "DiffDelete"}})
       end
-      
+
       -- Place at the very end of the buffer
       local end_line = math.max(0, buf_line_count - 1)
-      
-      log(string.format("Rendering %d EOF deletion(s) after the last line (buffer line %d)", 
+
+      log(string.format("Rendering %d EOF deletion(s) after the last line (buffer line %d)",
         #del_lines, end_line + 1))
-      
+
       -- Place the virtual lines BELOW (not above) the last line
       vim.api.nvim_buf_set_extmark(bufnr, ns_id, end_line, 0, {
         virt_lines = virt_lines,
@@ -138,14 +158,14 @@ function M.render_hunk(hunk)
       for _, line in ipairs(del_lines) do
         table.insert(virt_lines, {{line, "DiffDelete"}})
       end
-      
+
       -- Calculate safe position (bounded to actual buffer)
       local target_line = math.min(tonumber(pos) - 1, buf_line_count - 1)
       target_line = math.max(target_line, 0)
-      
-      log(string.format("Rendering %d deletion(s) at position %d (buffer line %d)", 
+
+      log(string.format("Rendering %d deletion(s) at position %d (buffer line %d)",
         #del_lines, pos, target_line + 1))
-      
+
       -- Place the virtual lines
       vim.api.nvim_buf_set_extmark(bufnr, ns_id, target_line, 0, {
         virt_lines = virt_lines,
@@ -153,7 +173,7 @@ function M.render_hunk(hunk)
       })
     end
   end
-  
+
   -- Render additions and word-diffs
   for pos, content in pairs(additions) do
     -- Only continue if the position is valid in the buffer
@@ -161,7 +181,7 @@ function M.render_hunk(hunk)
       log(string.format("Skipping addition at position %d - beyond buffer end", pos))
       goto continue_addition
     end
-    
+
     -- Check if this is a word diff line
     if type(content) == "string" and (content:find("%[%-.-%-%]") or content:find("%{%+.-%+%}")) then
       -- Process word-level changes
@@ -170,7 +190,7 @@ function M.render_hunk(hunk)
     else
       -- Pure addition - check if it matches the current content in the buffer
       local buffer_line = buffer_lines[pos]
-      
+
       if buffer_line == content then
         -- This is a pure addition - highlight the entire line
         log(string.format("Highlighting addition at position %d: %s", pos, content))
@@ -179,26 +199,26 @@ function M.render_hunk(hunk)
         })
       end
     end
-    
+
     ::continue_addition::
   end
 end
 
 function M.inline_diff_highlight(bufnr, current_line, line)
   log("Inline diff at line " .. current_line .. ": " .. line)
-  
+
   -- Get buffer line count for bounds checking
   local buf_line_count = vim.api.nvim_buf_line_count(bufnr)
-  
+
   -- Check if the current line is within valid buffer bounds
   if current_line <= 0 or current_line > buf_line_count then
     log("Warning: Cannot highlight line " .. current_line .. " - out of buffer range (1-" .. buf_line_count .. ")")
     return
   end
-  
+
   -- Get the content of the current line in the buffer
   local line_content = vim.api.nvim_buf_get_lines(bufnr, current_line - 1, current_line, false)[1] or ""
-  
+
   -- Check for whole-line changes first
   if line:match("^%s*%[%-.*%-%]$") then
     -- Full line deletion - show as virtual line
@@ -217,7 +237,7 @@ function M.inline_diff_highlight(bufnr, current_line, line)
     })
     return
   end
-  
+
   -- Process inline changes
   local pos = 1
   while pos <= #line do
@@ -227,11 +247,11 @@ function M.inline_diff_highlight(bufnr, current_line, line)
       local full_match = line:sub(repl_start, repl_end)
       local deleted = full_match:match("%[%-(.-)%-%]")
       local added = full_match:match("%{%+(.-)%+%}")
-      
+
       -- Find position in buffer
       local prefix = line:sub(1, repl_start - 1):gsub("%[%-.-%-%]", ""):gsub("%{%+(.-)%+%}", "%1")
       local start_col = #prefix
-      
+
       -- Ensure column is within bounds of the line
       if start_col < #line_content then
         -- Show deleted text as inline virtual text with DiffDelete
@@ -239,7 +259,7 @@ function M.inline_diff_highlight(bufnr, current_line, line)
           virt_text = {{deleted, "DiffDelete"}},
           virt_text_pos = "inline",
         })
-        
+
         -- Highlight added text with DiffChange
         if start_col + #added <= #line_content then
           vim.api.nvim_buf_set_extmark(bufnr, ns_id, current_line - 1, start_col, {
@@ -250,18 +270,18 @@ function M.inline_diff_highlight(bufnr, current_line, line)
       else
         log("Warning: Column position " .. start_col .. " is out of range for line " .. current_line)
       end
-      
+
       pos = repl_end + 1
-    
+
     -- Handle standalone deletion: [-deleted-]
     elseif line:find("%[%-.-%-%]", pos) == pos then
       local del_start, del_end = line:find("%[%-.-%-%]", pos)
       local deleted = line:sub(del_start + 2, del_end - 2)
-      
+
       -- Find position in buffer
       local prefix = line:sub(1, del_start - 1):gsub("%[%-.-%-%]", ""):gsub("%{%+(.-)%+%}", "%1")
       local start_col = #prefix
-      
+
       -- Ensure column is within bounds of the line
       if start_col < #line_content then
         -- Show deleted text as inline virtual text
@@ -272,18 +292,18 @@ function M.inline_diff_highlight(bufnr, current_line, line)
       else
         log("Warning: Column position " .. start_col .. " is out of range for line " .. current_line)
       end
-      
+
       pos = del_end + 1
-    
+
     -- Handle standalone addition: {+added+}
     elseif line:find("%{%+.-%+%}", pos) == pos then
       local add_start, add_end = line:find("%{%+.-%+%}", pos)
       local added = line:sub(add_start + 2, add_end - 2)
-      
+
       -- Find position in buffer
       local prefix = line:sub(1, add_start - 1):gsub("%[%-.-%-%]", ""):gsub("%{%+(.-)%+%}", "%1")
       local start_col = #prefix
-      
+
       -- Ensure column is within bounds of the line
       if start_col < #line_content then
         -- Highlight added text
@@ -303,7 +323,7 @@ function M.inline_diff_highlight(bufnr, current_line, line)
       else
         log("Warning: Column position " .. start_col .. " is out of range for line " .. current_line)
       end
-      
+
       pos = add_end + 1
     else
       -- No pattern match, move forward
@@ -354,7 +374,7 @@ function M.run_git_diff(target_branch, opts)
         -- Found hunk header
         local start_line = tonumber(line:match("%+(%d+)")) or 1
         local hunk_header = line
-        
+
         -- Collect all lines in this hunk
         local hunk_lines = { line } -- Start with the header
         local j = i + 1
@@ -362,7 +382,7 @@ function M.run_git_diff(target_branch, opts)
           table.insert(hunk_lines, lines[j])
           j = j + 1
         end
-        
+
         -- Find first actual change line in hunk
         local first_change_line = start_line
         local offset = 0
@@ -387,7 +407,7 @@ function M.run_git_diff(target_branch, opts)
             offset = offset + 1
           end
         end
-        
+
         -- Create a quickfix item for the entire hunk
         table.insert(qf_items, {
           filename = current_file,
@@ -401,7 +421,7 @@ function M.run_git_diff(target_branch, opts)
             start_line = start_line,
           },
         })
-        
+
         i = j -- Move to next hunk
       else
         i = i + 1

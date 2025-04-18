@@ -177,6 +177,7 @@ M.setup = function(cfg)
   end
 
   require('forgit.commands').setup()
+  require('forgit.diff').setup()
   require('forgit.list')
 end
 
