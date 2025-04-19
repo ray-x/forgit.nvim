@@ -71,58 +71,45 @@ function M.internal.parse_hunk(hunk_lines)
   local cur_old = old_start
   local cur_new = new_start
 
+  -- Keep track of context lines to handle offset correctly
+  local context_lines = 0
+
   for i = 2, #hunk_lines do
     local line = hunk_lines[i]
     if line == "" then goto continue_parse end
 
-    local first_char = line:sub(1, 1)
+    -- Track if this line contains actual changes
+    local has_changes = line:find("%[%-.-%-%]") or line:find("%{%+.-%+%}")
 
-    if first_char == "-" then
-      -- Deletion line
-      if not hunk_data.deletions[cur_new] then
-        hunk_data.deletions[cur_new] = {}
-      end
-      table.insert(hunk_data.deletions[cur_new], line:sub(2))
-      cur_old = cur_old + 1
-      -- Do NOT increment cur_new for deletions
-    elseif first_char == "+" then
-      -- Addition line
-      hunk_data.additions[cur_new] = line:sub(2)
-      cur_new = cur_new + 1
-    elseif line:match("^%s*%{%+.*%+%}$") then
-      -- Special case: word diff that's a complete line addition
-      local content = line:match("%{%+(.-)%+%}")
-      hunk_data.additions[cur_new] = content
-      cur_new = cur_new + 1
-    elseif line:match("^%s*%[%-.*%-%]$") then
-      -- Special case: word diff that's a complete line deletion
-      local content = line:match("%[%-(.-)%-%]")
-      if not hunk_data.deletions[cur_new] then
-        hunk_data.deletions[cur_new] = {}
-      end
-      table.insert(hunk_data.deletions[cur_new], content)
-      cur_old = cur_old + 1
-    elseif line:find("%[%-.-%-%]") or line:find("%{%+.-%+%}") then
-      -- Mixed word diff line
-      hunk_data.word_diffs[cur_new] = line
+    -- Check for markdown list items at the beginning of the line
+    local is_list_item = line:match("^%s*%- ")
+
+    if has_changes then
+      -- This is a line with word-level changes
+      -- Store both the content and the line number
+      hunk_data.word_diffs[cur_new] = {
+        content = line,
+        is_list_item = is_list_item
+      }
+
+      -- Log the exact line match we're targeting
+      local normalized_line = line
+        :gsub("%[%-.-%-%]", "") -- Remove deleted text
+        :gsub("%{%+(.-)%+%}", "%1") -- Replace additions with just the text
+
+      log(string.format("Word diff detected at line %d: '%s' (normalized: '%s')",
+        cur_new, line, normalized_line))
+
       cur_old = cur_old + 1
       cur_new = cur_new + 1
     else
       -- Context line (unchanged)
+      context_lines = context_lines + 1
       cur_old = cur_old + 1
       cur_new = cur_new + 1
     end
 
     ::continue_parse::
-  end
-
-  -- Handle end-of-file deletions
-  for pos, _ in pairs(hunk_data.deletions) do
-    if tonumber(pos) and tonumber(pos) > new_start + new_count - 1 then
-      -- Move to EOF section
-      hunk_data.deletions["EOF"] = hunk_data.deletions[pos]
-      hunk_data.deletions[pos] = nil
-    end
   end
 
   return hunk_data
@@ -244,17 +231,119 @@ function M.internal.render_word_diffs(bufnr, hunk_data)
   local buf_line_count = vim.api.nvim_buf_line_count(bufnr)
   local render_count = 0
 
-  for pos, content in pairs(hunk_data.word_diffs) do
-    -- Only continue if the position is valid in the buffer
-    if pos > buf_line_count then
-      goto continue_word
+  -- Get all buffer lines for content matching
+  local buffer_lines = vim.api.nvim_buf_get_lines(bufnr, 0, buf_line_count, false)
+
+  for pos, diff_data in pairs(hunk_data.word_diffs) do
+    -- Unpack the content and metadata
+    local content = diff_data.content
+    local is_list_item = diff_data.is_list_item
+
+    -- Calculate normalized content (what the line should look like after changes)
+    local normalized_content = content
+      :gsub("%[%-.-%-%]", "") -- Remove deleted text
+      :gsub("%{%+(.-)%+%}", "%1") -- Replace additions with the added text
+
+    -- Remove diff markers from normalized content for comparison
+    local clean_content = normalized_content
+
+    -- Find the actual line that matches this content, starting from pos-1
+    local actual_line = pos
+    local found_match = false
+
+    -- Try to find an exact match in a window around the expected position
+    local search_start = math.max(1, pos - 3)
+    local search_end = math.min(buf_line_count, pos + 3)
+
+    log(string.format("Searching for line match around line %d (range: %d-%d)",
+      pos, search_start, search_end))
+
+    -- For list items, we need to be more careful with matching
+    if is_list_item then
+      -- Extract just the content part after the list marker for matching
+      local list_prefix = clean_content:match("^(%s*%- )")
+      local content_without_marker = clean_content:gsub("^%s*%- ", "")
+
+      for i = search_start, search_end do
+        local buffer_line = buffer_lines[i] or ""
+        local buffer_content = buffer_line:gsub("^%s*%- ", "")
+
+        -- Compare the content part without the list marker
+        if buffer_content and content_without_marker and
+           buffer_content:find(content_without_marker, 1, true) then
+          actual_line = i
+          found_match = true
+          log(string.format("Found list item match at line %d: '%s'", i, buffer_line))
+          break
+        end
+      end
+    else
+      -- For regular lines, try a direct match first
+      for i = search_start, search_end do
+        local buffer_line = buffer_lines[i] or ""
+
+        -- Try to match the normalized content (ignoring diff markers)
+        -- We use a relaxed match that looks for the clean content as a substring
+        if buffer_line and clean_content and
+           buffer_line:find(clean_content:gsub("%%", "%%%%"), 1, true) then
+          actual_line = i
+          found_match = true
+          log(string.format("Found direct match at line %d: '%s'", i, buffer_line))
+          break
+        end
+      end
+
+      -- If no match, try matching parts of the content (for links and other complex content)
+      if not found_match then
+        for i = search_start, search_end do
+          local buffer_line = buffer_lines[i] or ""
+
+          -- Extract key parts of the content for matching
+          local key_parts = {}
+          -- Find URL parts that might be consistent
+          for url in clean_content:gmatch("%(([^%)]+)%)") do
+            table.insert(key_parts, url)
+          end
+          -- Find text parts that might be consistent
+          for text in clean_content:gmatch("%[([^%]]+)%]") do
+            table.insert(key_parts, text)
+          end
+
+          local match_count = 0
+          for _, part in ipairs(key_parts) do
+            if buffer_line:find(part, 1, true) then
+              match_count = match_count + 1
+            end
+          end
+
+          -- If we match more than one key part, consider it a match
+          if match_count >= 1 and #key_parts > 0 then
+            actual_line = i
+            found_match = true
+            log(string.format("Found partial match at line %d: '%s'", i, buffer_line))
+            break
+          end
+        end
+      end
     end
 
-    -- Process word-level changes
-    M.inline_diff_highlight(bufnr, pos, content)
-    render_count = render_count + 1
+    if not found_match then
+      log(string.format("Warning: No match found for content near line %d: '%s'",
+        pos, clean_content))
+      -- Fall back to the original position
+      actual_line = pos
+    end
 
-    ::continue_word::
+    -- Only continue if the position is valid in the buffer
+    if actual_line > 0 and actual_line <= buf_line_count then
+      -- Process word-level changes on the actual matching line
+      log(string.format("Applying word diff to line %d (original pos: %d)", actual_line, pos))
+      M.inline_diff_highlight(bufnr, actual_line, content)
+      render_count = render_count + 1
+    else
+      log(string.format("Warning: Line %d is out of buffer range (1-%d)",
+        actual_line, buf_line_count))
+    end
   end
 
   return render_count
@@ -337,6 +426,7 @@ function M.inline_diff_highlight(bufnr, current_line, line)
 
   -- Get the content of the current line in the buffer
   local line_content = vim.api.nvim_buf_get_lines(bufnr, current_line - 1, current_line, false)[1] or ""
+  log("Current buffer line content: " .. line_content)
 
   -- Check for whole-line changes first
   if line:match("^%s*%[%-.*%-%]$") then
@@ -357,53 +447,117 @@ function M.inline_diff_highlight(bufnr, current_line, line)
     return
   end
 
+  -- Handle markdown list items specially
+  local is_markdown_list = line:match("^%s*%- ")
+  local prefix_offset = 0
+
+  if is_markdown_list then
+    -- Calculate the offset from the list marker
+    local list_marker = line:match("^(%s*%- )")
+    if list_marker then
+      prefix_offset = #list_marker
+      log("List item detected with prefix: '" .. list_marker .. "', offset: " .. prefix_offset)
+    end
+  end
+
+  -- Create a normalized version of the line to help find positions
+  local normalized_line = line:gsub("%[%-.-%-%]", ""):gsub("%{%+(.-)%+%}", "%1")
+
+  -- Check if the normalized line actually appears in the buffer
+  -- This helps verify we're on the right line
+  if not line_content:find(normalized_line:gsub("%%", "%%%%"), 1, true) and
+     #normalized_line > 10 then -- Only check for substantial matches
+    log("Warning: Normalized line doesn't match buffer content")
+    log("  Normalized: " .. normalized_line)
+    log("  Buffer: " .. line_content)
+
+    -- Try to find key parts that should match
+    local key_part = normalized_line:match("[^%s%.%(%)]+")
+    if key_part and #key_part > 3 and not line_content:find(key_part, 1, true) then
+      log("Warning: Key part '" .. key_part .. "' not found in buffer line")
+      -- Consider finding a better matching line or adjusting position
+    end
+  end
+
   -- Process inline changes
   local pos = 1
   while pos <= #line do
-    -- Handle combined changes: [-old-]{+new+}
-    local repl_start, repl_end = line:find("%[%-.-%-%]%{%+.-%+%}", pos)
-    if repl_start then
-      local full_match = line:sub(repl_start, repl_end)
+    -- Find word diff patterns: [-old-]{+new+}
+    local diff_start, diff_end = line:find("%[%-.-%-%]%{%+.-%+%}", pos)
+    if diff_start then
+      local full_match = line:sub(diff_start, diff_end)
       local deleted = full_match:match("%[%-(.-)%-%]")
       local added = full_match:match("%{%+(.-)%+%}")
 
-      -- Find position in buffer
-      local prefix = line:sub(1, repl_start - 1):gsub("%[%-.-%-%]", ""):gsub("%{%+(.-)%+%}", "%1")
-      local start_col = #prefix
+      -- Calculate prefix accounting for any previous diffs and list markers
+      local visible_prefix = line:sub(1, diff_start - 1)
+                             :gsub("%[%-.-%-%]", "")
+                             :gsub("%{%+(.-)%+%}", "%1")
+      local start_col = #visible_prefix
+
+      -- Try to locate the exact position in the buffer line
+      local buffer_prefix = line_content:sub(1, math.min(start_col, #line_content))
+      local expected_text = added or ""
+      local expected_pos = start_col
+
+      -- Check if the buffer prefix matches our calculated prefix
+      if buffer_prefix ~= visible_prefix and #visible_prefix > 3 then
+        log("Warning: Buffer prefix doesn't match calculated prefix")
+        log("  Buffer prefix: '" .. buffer_prefix .. "'")
+        log("  Calculated prefix: '" .. visible_prefix .. "'")
+
+        -- Try to find the correct position by scanning for text after the change
+        local after_change = line:sub(diff_end + 1):gsub("%[%-.-%-%]", ""):gsub("%{%+(.-)%+%}", "%1")
+        local after_pos = line_content:find(after_change, 1, true)
+
+        if after_pos and after_change ~= "" and #after_change > 3 then
+          -- Adjust our starting position based on where the suffix appears
+          expected_pos = after_pos - #expected_text
+          log("Adjusted position using text after change to " .. expected_pos)
+        end
+      end
 
       -- Ensure column is within bounds of the line
-      if start_col < #line_content then
+      if expected_pos >= 0 and expected_pos < #line_content then
         -- Show deleted text as inline virtual text with DiffDelete
-        vim.api.nvim_buf_set_extmark(bufnr, ns_id, current_line - 1, start_col, {
+        log(string.format("Placing deletion at col %d: '%s'", expected_pos, deleted))
+        vim.api.nvim_buf_set_extmark(bufnr, ns_id, current_line - 1, expected_pos, {
           virt_text = {{deleted, "DiffDelete"}},
           virt_text_pos = "inline",
         })
 
         -- Highlight added text with DiffChange
-        if start_col + #added <= #line_content then
-          vim.api.nvim_buf_set_extmark(bufnr, ns_id, current_line - 1, start_col, {
+        if added and added ~= "" and expected_pos + #added <= #line_content then
+          log(string.format("Highlighting addition at col %d-%d: '%s'",
+            expected_pos, expected_pos + #added, added))
+          vim.api.nvim_buf_set_extmark(bufnr, ns_id, current_line - 1, expected_pos, {
             hl_group = "DiffChange",
-            end_col = math.min(start_col + #added, #line_content),
+            end_col = math.min(expected_pos + #added, #line_content),
           })
         end
       else
-        log("Warning: Column position " .. start_col .. " is out of range for line " .. current_line)
+        log("Warning: Column position " .. expected_pos .. " is out of range for line " .. current_line)
       end
 
-      pos = repl_end + 1
-
+      pos = diff_end + 1
     -- Handle standalone deletion: [-deleted-]
     elseif line:find("%[%-.-%-%]", pos) == pos then
       local del_start, del_end = line:find("%[%-.-%-%]", pos)
       local deleted = line:sub(del_start + 2, del_end - 2)
 
-      -- Find position in buffer
-      local prefix = line:sub(1, del_start - 1):gsub("%[%-.-%-%]", ""):gsub("%{%+(.-)%+%}", "%1")
-      local start_col = #prefix
+      -- Calculate prefix accounting for any previous diffs and list markers
+      local visible_prefix = line:sub(1, del_start - 1)
+                             :gsub("%[%-.-%-%]", "")
+                             :gsub("%{%+(.-)%+%}", "%1")
+      local start_col = #visible_prefix
+
+      -- Try to locate the exact position in the buffer line
+      local buffer_prefix = line_content:sub(1, math.min(start_col, #line_content))
 
       -- Ensure column is within bounds of the line
-      if start_col < #line_content then
+      if start_col >= 0 and start_col < #line_content then
         -- Show deleted text as inline virtual text
+        log(string.format("Placing standalone deletion at col %d: '%s'", start_col, deleted))
         vim.api.nvim_buf_set_extmark(bufnr, ns_id, current_line - 1, start_col, {
           virt_text = {{deleted, "DiffDelete"}},
           virt_text_pos = "inline",
@@ -413,20 +567,26 @@ function M.inline_diff_highlight(bufnr, current_line, line)
       end
 
       pos = del_end + 1
-
     -- Handle standalone addition: {+added+}
-    elseif line:find("%s%{%+.-%+%}", pos) == pos then
+    elseif line:find("%{%+.-%+%}", pos) then
       local add_start, add_end = line:find("%{%+.-%+%}", pos)
       local added = line:sub(add_start + 2, add_end - 2)
 
-      -- Find position in buffer
-      local prefix = line:sub(1, add_start - 1):gsub("%[%-.-%-%]", ""):gsub("%{%+(.-)%+%}", "%1")
-      local start_col = #prefix
+      -- Calculate prefix accounting for any previous diffs and list markers
+      local visible_prefix = line:sub(1, add_start - 1)
+                             :gsub("%[%-.-%-%]", "")
+                             :gsub("%{%+(.-)%+%}", "%1")
+      local start_col = #visible_prefix
+
+      -- Try to locate the exact position in the buffer line
+      local buffer_prefix = line_content:sub(1, math.min(start_col, #line_content))
 
       -- Ensure column is within bounds of the line
-      if start_col < #line_content then
+      if start_col >= 0 and start_col < #line_content then
         -- Highlight added text
         if start_col + #added <= #line_content then
+          log(string.format("Highlighting standalone addition at col %d-%d: '%s'",
+            start_col, start_col + #added, added))
           vim.api.nvim_buf_set_extmark(bufnr, ns_id, current_line - 1, start_col, {
             hl_group = "DiffAdd",
             end_col = math.min(start_col + #added, #line_content),
@@ -456,11 +616,11 @@ end
 function M.run_git_diff(target_branch, opts)
   opts = opts or {}
   local current_buf = vim.api.nvim_get_current_buf()
-  
+
   -- Determine which files to diff
   local files = {}
   local diff_all = true  -- Default to diff all files
-  
+
   if opts.files and #opts.files > 0 then
     -- Process specific files
     diff_all = false  -- We're diffing specific files
@@ -477,22 +637,22 @@ function M.run_git_diff(target_branch, opts)
       end
     end
   end
-  
+
   -- Clear previous diff highlights for the current buffer
   clear_diff_highlights(current_buf)
-  
+
   -- Prepare the git command
   local git_cmd = {"git", "--no-pager", "diff"}
-  
+
   -- Add target if specified and not empty
   if target_branch and target_branch ~= "" then
     table.insert(git_cmd, target_branch)
   end
-  
+
   -- Add other options
   table.insert(git_cmd, "--word-diff=plain")
   table.insert(git_cmd, "--diff-algorithm=myers")
-  
+
   -- Add files if specific files are requested
   if not diff_all and #files > 0 then
     table.insert(git_cmd, "--")
@@ -500,9 +660,9 @@ function M.run_git_diff(target_branch, opts)
       table.insert(git_cmd, file)
     end
   end
-  
+
   log("Running git command: " .. table.concat(git_cmd, " "))
-  
+
   -- Run the git diff command
   vim.system(git_cmd, { text = true }, function(res)
     if res.code ~= 0 then
@@ -742,17 +902,17 @@ function M.setup()
     local target_branch = nil
     local files = {}
     local parts = vim.split(args, "%s+")
-    
+
     local i = 1
     while i <= #parts do
       local part = parts[i]
-      
+
       -- Skip empty parts
       if part == "" then
         i = i + 1
         goto continue
       end
-      
+
       -- Check for file specifier
       if part == "--" then
         -- Everything after -- is a file
@@ -776,11 +936,11 @@ function M.setup()
         -- Additional arguments are assumed to be files
         table.insert(files, part)
       end
-      
+
       ::continue::
       i = i + 1
     end
-    
+
     return {
       target = target_branch,
       files = #files > 0 and files or nil
