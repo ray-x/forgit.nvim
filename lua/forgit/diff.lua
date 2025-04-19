@@ -679,11 +679,20 @@ function M.run_git_diff(target_branch, opts)
 
     local lines = split_lines(res.stdout)
     local qf_items = {}
+    log(res.stdout)
 
     -- Process the diff output one hunk at a time
     local i = 1
+    local hunk_file
     while i <= #lines do
       local line = lines[i]
+      -- find hunk file header
+      if line:match("^diff %-%-git") then
+        -- Found a new file header
+        hunk_file = line:match("b/(.+)$")
+        log("Found hunk file: " .. line  .. hunk_file)
+        -- Get the next line for the buffer number
+      end
 
       if line:match("^@@") then
         -- Found hunk header
@@ -693,7 +702,7 @@ function M.run_git_diff(target_branch, opts)
         -- Collect all lines in this hunk
         local hunk_lines = { line } -- Start with the header
         local j = i + 1
-        while j <= #lines and not lines[j]:match("^@@") do
+        while j <= #lines and not lines[j]:match("^@@") and not lines[j]:match("^diff %-%-git") do
           table.insert(hunk_lines, lines[j])
           j = j + 1
         end
@@ -725,8 +734,7 @@ function M.run_git_diff(target_branch, opts)
 
         -- Create a quickfix item for the entire hunk
         table.insert(qf_items, {
-          filename = current_file,
-          bufnr = current_buf,
+          filename = hunk_file,
           lnum = first_change_line,
           col = 1,
           text = hunk_header,
@@ -755,6 +763,14 @@ function M.run_git_diff(target_branch, opts)
 
     -- Render all hunks and populate quickfix
     vim.schedule(function()
+
+      -- setup filename and bufnr for qf
+      for i, item in ipairs(qf_items) do
+        local bufnr = vim.fn.bufnr(item.filename or 0)
+        if bufnr >= 0 then
+          item.bufnr = bufnr
+        end
+      end
       vim.fn.setqflist({}, " ", {
         title = title,
         items = qf_items,
