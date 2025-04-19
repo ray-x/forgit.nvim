@@ -2,7 +2,7 @@ local utils = require('forgit.utils')
 local log = utils.log
 local M = {}
 
--- Namespace for extmarks
+-- Namespace for diff extmarks
 local ns_id = vim.api.nvim_create_namespace('git_diff_render')
 
 -- Helper function to split text into lines
@@ -456,13 +456,14 @@ end
 function M.run_git_diff(target_branch, opts)
   opts = opts or {}
   local current_buf = vim.api.nvim_get_current_buf()
-
+  
   -- Determine which files to diff
   local files = {}
-  local diff_all = false
-
+  local diff_all = true  -- Default to diff all files
+  
   if opts.files and #opts.files > 0 then
     -- Process specific files
+    diff_all = false  -- We're diffing specific files
     for _, file in ipairs(opts.files) do
       if file == "%" then
         local current_file = vim.api.nvim_buf_get_name(current_buf)
@@ -475,43 +476,33 @@ function M.run_git_diff(target_branch, opts)
         table.insert(files, file)
       end
     end
-  else
-    -- Default to current file if no files specified
-    local current_file = vim.api.nvim_buf_get_name(current_buf)
-    if current_file == "" then
-      -- For unnamed buffers, diff all tracked files
-      diff_all = true
-      log("Unnamed buffer or no files specified - diffing all tracked files")
-    else
-      table.insert(files, current_file)
-    end
   end
-
+  
   -- Clear previous diff highlights for the current buffer
   clear_diff_highlights(current_buf)
-
+  
   -- Prepare the git command
   local git_cmd = {"git", "--no-pager", "diff"}
-
+  
   -- Add target if specified and not empty
   if target_branch and target_branch ~= "" then
     table.insert(git_cmd, target_branch)
   end
-
+  
   -- Add other options
   table.insert(git_cmd, "--word-diff=plain")
   table.insert(git_cmd, "--diff-algorithm=myers")
-
-  -- Add files if specified (but not for diff_all)
+  
+  -- Add files if specific files are requested
   if not diff_all and #files > 0 then
     table.insert(git_cmd, "--")
     for _, file in ipairs(files) do
       table.insert(git_cmd, file)
     end
   end
-
+  
   log("Running git command: " .. table.concat(git_cmd, " "))
-
+  
   -- Run the git diff command
   vim.system(git_cmd, { text = true }, function(res)
     if res.code ~= 0 then
@@ -751,32 +742,45 @@ function M.setup()
     local target_branch = nil
     local files = {}
     local parts = vim.split(args, "%s+")
-
+    
     local i = 1
     while i <= #parts do
       local part = parts[i]
-
+      
+      -- Skip empty parts
+      if part == "" then
+        i = i + 1
+        goto continue
+      end
+      
       -- Check for file specifier
       if part == "--" then
         -- Everything after -- is a file
         for j = i + 1, #parts do
-          table.insert(files, parts[j])
+          if parts[j] and parts[j] ~= "" then
+            table.insert(files, parts[j])
+          end
         end
         break
       elseif part == "%" then
         -- Current file
         table.insert(files, "%")
-      elseif not target_branch and part ~= "" then
-        -- First non-special argument is target branch
+      -- Check if this looks like a file path or pattern rather than a branch
+      elseif (not target_branch) and (part:find("/") or part:find("%.") or part:find("*")) then
+        -- This is probably a file, not a branch
+        table.insert(files, part)
+      elseif not target_branch then
+        -- First non-special argument is assumed to be a target branch
         target_branch = part
       else
-        -- Additional arguments might be file patterns
+        -- Additional arguments are assumed to be files
         table.insert(files, part)
       end
-
+      
+      ::continue::
       i = i + 1
     end
-
+    
     return {
       target = target_branch,
       files = #files > 0 and files or nil
