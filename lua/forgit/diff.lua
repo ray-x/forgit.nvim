@@ -49,66 +49,71 @@ M.internal = {}  -- For test access to internal functions
 
 -- Parse a git diff hunk into a structured representation
 function M.internal.parse_hunk(hunk_lines)
-  -- Extract header information
   local header = hunk_lines[1]
   local old_start, old_count, new_start, new_count = header:match("@@ %-(%d+),(%d+) %+(%d+),(%d+) @@")
   old_start, old_count = tonumber(old_start) or 1, tonumber(old_count) or 0
   new_start, new_count = tonumber(new_start) or 1, tonumber(new_count) or 0
 
-  -- Store header info
   local hunk_data = {
     header = header,
     old_start = old_start,
     old_count = old_count,
     new_start = new_start,
     new_count = new_count,
-    deletions = {}, -- Maps positions to deleted lines
-    additions = {}, -- Maps positions to added lines
-    word_diffs = {} -- Maps positions to word diff lines
+    deletions = {}, -- { {line=..., after_context_idx=...}, ... }
+    context = {},   -- { idx = buffer_line_number, text = ... }
+    additions = {},
+    word_diffs = {},
   }
 
-  -- Process the hunk line by line
   local cur_old = old_start
   local cur_new = new_start
-
-  -- Keep track of context lines to handle offset correctly
-  local context_lines = 0
+  local context_idx = 0
 
   for i = 2, #hunk_lines do
     local line = hunk_lines[i]
     if line == "" then goto continue_parse end
 
-    -- Track if this line contains actual changes
-    local has_changes = line:find("%[%-.-%-%]") or line:find("%{%+.-%+%}")
-
-    -- Check for markdown list items at the beginning of the line
-    local is_list_item = line:match("^%s*%- ")
-
-    if has_changes then
-      -- This is a line with word-level changes
-      -- Store both the content and the line number
-      hunk_data.word_diffs[cur_new] = {
+    if line:match("^%[%-.*%-%]$") then
+      -- Pure deletion line
+      table.insert(hunk_data.deletions, {
+        text = line:match("%[%-(.-)%-%]"),
+        before_context = context_idx,
+        hunk_idx = i,
+      })
+      cur_old = cur_old + 1
+    elseif line:match("^%{%+.*%+%}$") then
+      -- Pure addition line
+      table.insert(hunk_data.additions, cur_new, line:match("%{%+(.-)%+%}"))
+      cur_new = cur_new + 1
+    elseif line:find("%[%-.-%-%]") or line:find("%{%+.-%+%}") then
+      -- Word diff line (modification)
+      table.insert(hunk_data.word_diffs, {
+        pos = cur_new,
         content = line,
-        is_list_item = is_list_item
-      }
-
-      -- Log the exact line match we're targeting
-      local normalized_line = line
-        :gsub("%[%-.-%-%]", "") -- Remove deleted text
-        :gsub("%{%+(.-)%+%}", "%1") -- Replace additions with just the text
-
-      log(string.format("Word diff detected at line %d: '%s' (normalized: '%s')",
-        cur_new, line, normalized_line))
-
+        is_list_item = line:match("^%s*%- "),
+      })
+      context_idx = context_idx + 1
+      table.insert(hunk_data.context, {
+        idx = context_idx,
+        text = line,
+        hunk_idx = i,
+        new_linenr = cur_new,
+      })
       cur_old = cur_old + 1
       cur_new = cur_new + 1
     else
-      -- Context line (unchanged)
-      context_lines = context_lines + 1
+      -- Context line
+      context_idx = context_idx + 1
+      table.insert(hunk_data.context, {
+        idx = context_idx,
+        text = line,
+        hunk_idx = i,
+        new_linenr = cur_new,
+      })
       cur_old = cur_old + 1
       cur_new = cur_new + 1
     end
-
     ::continue_parse::
   end
 
@@ -138,59 +143,51 @@ end
 function M.internal.render_deletions(bufnr, hunk_data)
   local buf_line_count = vim.api.nvim_buf_line_count(bufnr)
   local render_count = 0
+  local context = hunk_data.context
 
-  -- Get the content of the buffer for context checking
-  local buffer_lines = vim.api.nvim_buf_get_lines(bufnr, 0, buf_line_count, false)
+  -- Group deletions by before_context, preserving order
+  local grouped = {}
+  for _, del in ipairs(hunk_data.deletions) do
+    grouped[del.before_context] = grouped[del.before_context] or {}
+    table.insert(grouped[del.before_context], del)
+  end
 
-  -- Render regular deletions
-  for pos, del_lines in pairs(hunk_data.deletions) do
-    if pos == "EOF" then
-      -- Handle EOF deletions
-      local virt_lines = {}
-      for _, line in ipairs(del_lines) do
-        table.insert(virt_lines, {{line, "DiffDelete"}})
-      end
+  -- Sort keys to render in correct order
+  local keys = {}
+  for k in pairs(grouped) do table.insert(keys, k) end
+  table.sort(keys, function(a, b) return a < b end)
 
-      -- Place at the very end of the buffer
-      local end_line = math.max(0, buf_line_count - 1)
-
-      -- Place the virtual lines BELOW (not above) the last line
-      vim.api.nvim_buf_set_extmark(bufnr, ns_id, end_line, 0, {
-        virt_lines = virt_lines,
-        virt_lines_above = false,
-      })
-      render_count = render_count + #del_lines
-    else
-      -- Normal deletions
-      local virt_lines = {}
-      for _, line in ipairs(del_lines) do
-        table.insert(virt_lines, {{line, "DiffDelete"}})
-      end
-
-      -- Calculate safe position (bounded to actual buffer)
-      local target_line = math.min(tonumber(pos) - 1, buf_line_count - 1)
-      target_line = math.max(target_line, 0)
-
-      -- Check context to determine if we should place above or below
-      local place_above = true
-
-      -- Get the line at the target position
-      local line_content = buffer_lines[target_line + 1] or ""
-
-      -- If this line is a function declaration or an opening brace, place below
-      if line_content:match("^%s*func%s+") or line_content:match("%{%s*$") then
-        place_above = false
-        log(string.format("Placing deletions AFTER the function declaration at line %d", target_line + 1))
+  for _, before_context in ipairs(keys) do
+    local dels = grouped[before_context]
+    local target_line
+    if before_context == 0 then
+      if #context > 0 then
+        target_line = context[1].new_linenr - 1
       else
-        log(string.format("Placing deletions BEFORE line %d", target_line + 1))
+        target_line = hunk_data.new_start - 1
       end
+    else
+      if context[before_context + 1] then
+        target_line = context[before_context + 1].new_linenr - 1
+      else
+        -- No context after: anchor after the last context line in the hunk
+        if #context > 0 then
+          target_line = context[#context].new_linenr
+        else
+          target_line = buf_line_count
+        end
+      end
+    end
+    target_line = math.max(target_line, 0)
 
-      -- Place the virtual lines
+    -- Render each deletion in reverse order so the first appears at the top
+    for i = #dels, 1, -1 do
+      local del = dels[i]
       vim.api.nvim_buf_set_extmark(bufnr, ns_id, target_line, 0, {
-        virt_lines = virt_lines,
-        virt_lines_above = place_above,
+        virt_lines = {{{del.text, "DiffDelete"}}},
+        virt_lines_above = true,
       })
-      render_count = render_count + #del_lines
+      render_count = render_count + 1
     end
   end
 
@@ -234,7 +231,8 @@ function M.internal.render_word_diffs(bufnr, hunk_data)
   -- Get all buffer lines for content matching
   local buffer_lines = vim.api.nvim_buf_get_lines(bufnr, 0, buf_line_count, false)
 
-  for pos, diff_data in pairs(hunk_data.word_diffs) do
+  for _, diff_data in ipairs(hunk_data.word_diffs) do
+    local pos = diff_data.pos
     -- Unpack the content and metadata
     local content = diff_data.content
     local is_list_item = diff_data.is_list_item
@@ -429,13 +427,15 @@ function M.inline_diff_highlight(bufnr, current_line, line)
   log("Current buffer line content: " .. line_content)
 
   -- Check for whole-line changes first
-  if line:match("^%s*%[%-.*%-%]$") then
+  if line:match("^%s*%[%-.*%-%]%s*$") then
     -- Full line deletion - show as virtual line
     local deleted = line:match("%[%-(.-)%-%]")
     log("Full line deletion: " .. deleted .. " |" .. current_line)
+    
+    -- Create a virtual line to show the deletion
     vim.api.nvim_buf_set_extmark(bufnr, ns_id, current_line - 1, 0, {
       virt_lines = {{{deleted, "DiffDelete"}}},
-      virt_lines_above = true,
+      virt_lines_above = true, -- Default to above
     })
     return
   elseif line:match("^%s*%{%+.*%+%}$") then
