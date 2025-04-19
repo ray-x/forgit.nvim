@@ -72,13 +72,12 @@ function M.internal.parse_hunk(hunk_lines)
 
   for i = 2, #hunk_lines do
     local line = hunk_lines[i]
-    if line == '' then goto continue_parse end
 
     if line:match('^%[%-.*%-%]$') then
       -- Pure deletion line
       table.insert(hunk_data.deletions, {
         text = line:match('%[%-(.-)%-%]'),
-        before_context = context_idx,
+        after_context = context_idx,
         hunk_idx = i,
       })
       cur_old = cur_old + 1
@@ -140,16 +139,19 @@ function M.internal.validate_buffer_position(bufnr, line, col)
 end
 
 -- Render deletions from parsed hunk data
+---@hunk_data table of context, additions, deletions, modification
+---@hunk_data.context { hunk_idx = 8, idx = 4, new_linenr = 15, text = "surrounding text" }
 function M.internal.render_deletions(bufnr, hunk_data)
-  local buf_line_count = vim.api.nvim_buf_line_count(bufnr)
   local render_count = 0
   local context = hunk_data.context
+  log(hunk_data)
 
-  -- Group deletions by before_context, preserving order
+  -- Group deletions by after_context, preserving order
   local grouped = {}
+  -- deletions   deletions = { { after_context = 2, hunk_idx = 5, text = "\tdeleted text" }}
   for _, del in ipairs(hunk_data.deletions) do
-    grouped[del.before_context] = grouped[del.before_context] or {}
-    table.insert(grouped[del.before_context], del)
+    grouped[del.after_context] = grouped[del.after_context] or {}
+    table.insert(grouped[del.after_context], del)
   end
 
   -- Sort keys to render in correct order
@@ -157,41 +159,36 @@ function M.internal.render_deletions(bufnr, hunk_data)
   for k in pairs(grouped) do table.insert(keys, k) end
   table.sort(keys, function(a, b) return a < b end)
 
-  for _, before_context in ipairs(keys) do
-    local dels = grouped[before_context]
-    local target_line
-    if before_context == 0 then
-      if #context > 0 then
-        target_line = context[1].new_linenr - 1
-      else
-        target_line = hunk_data.new_start - 1
-      end
+  local vt_lines = {}
+  local above = false
+  for _, after_context in ipairs(keys) do
+    local dels = grouped[after_context]
+    local target_line = 0
+    log(string.format('Rendering %d deletions for context %d', #dels, after_context))
+    if after_context == 0 then
+      above = true  -- might be first line in the buffer
     else
-      if context[before_context + 1] then
-        target_line = context[before_context + 1].new_linenr - 1
+      if context[after_context] then
+        target_line = context[after_context].new_linenr - 1
       else
-        -- No context after: anchor after the last context line in the hunk
-        if #context > 0 then
-          target_line = context[#context].new_linenr
-        else
-          target_line = buf_line_count
-        end
+        target_line = hunk_data.new_start - 1 + hunk_data.new_count - 1   -- end of the hunk
       end
+      above = false
     end
-    target_line = math.max(target_line, 0)
 
     -- Render each deletion in reverse order so the first appears at the top
     for i = #dels, 1, -1 do
-      local del = dels[i]
-      vim.api.nvim_buf_set_extmark(bufnr, ns_id, target_line, 0, {
-        virt_lines = { { { del.text, 'DiffDelete' } } },
-        virt_lines_above = true,
-      })
-      render_count = render_count + 1
+      table.insert(vt_lines, 1, {{ dels[i].text, 'DiffDelete' }})
     end
-  end
 
-  return render_count
+    log(vt_lines, target_line)
+    vim.api.nvim_buf_set_extmark(bufnr, ns_id, target_line , 0, {
+      virt_lines = vt_lines,
+      virt_lines_above = above,
+    })
+    vt_lines = {} -- Reset for next group
+  end
+  return render_count, vt_lines
 end
 
 -- Render additions from parsed hunk data
@@ -239,7 +236,7 @@ function M.internal.render_word_diffs(bufnr, hunk_data)
 
     -- Calculate normalized content (what the line should look like after changes)
     local normalized_content = content
-        :gsub('%[%-.-%-%]', '')   -- Remove deleted text
+        :gsub('%[%-.-%-%]', '')     -- Remove deleted text
         :gsub('%{%+(.-)%+%}', '%1') -- Replace additions with the added text
 
     -- Remove diff markers from normalized content for comparison
@@ -271,7 +268,7 @@ function M.internal.render_word_diffs(bufnr, hunk_data)
             buffer_content:find(content_without_marker, 1, true) then
           actual_line = i
           found_match = true
-          log(string.format('Found list item match at line %d: '%s'', i, buffer_line))
+          log(string.format('Found list item match at line %d: ' % s '', i, buffer_line))
           break
         end
       end
@@ -286,7 +283,7 @@ function M.internal.render_word_diffs(bufnr, hunk_data)
             buffer_line:find(clean_content:gsub('%%', '%%%%'), 1, true) then
           actual_line = i
           found_match = true
-          log(string.format('Found direct match at line %d: '%s'', i, buffer_line))
+          log(string.format('Found direct match at line %d: ' % s '', i, buffer_line))
           break
         end
       end
@@ -318,7 +315,7 @@ function M.internal.render_word_diffs(bufnr, hunk_data)
           if match_count >= 1 and #key_parts > 0 then
             actual_line = i
             found_match = true
-            log(string.format('Found partial match at line %d: '%s'', i, buffer_line))
+            log(string.format('Found partial match at line %d: ' % s '', i, buffer_line))
             break
           end
         end
@@ -326,7 +323,7 @@ function M.internal.render_word_diffs(bufnr, hunk_data)
     end
 
     if not found_match then
-      log(string.format('Warning: No match found for content near line %d: '%s'',
+      log(string.format('Warning: No match found for content near line %d: ' % s '',
         pos, clean_content))
       -- Fall back to the original position
       actual_line = pos
@@ -557,7 +554,7 @@ function M.inline_diff_highlight(bufnr, current_line, line)
       -- Ensure column is within bounds of the line
       if start_col >= 0 and start_col < #line_content then
         -- Show deleted text as inline virtual text
-        log(string.format('Placing standalone deletion at col %d: '%s'', start_col, deleted))
+        log(string.format('Placing standalone deletion at col %d: ' % s '', start_col, deleted))
         vim.api.nvim_buf_set_extmark(bufnr, ns_id, current_line - 1, start_col, {
           virt_text = { { deleted, 'DiffDelete' } },
           virt_text_pos = 'inline',
@@ -585,7 +582,7 @@ function M.inline_diff_highlight(bufnr, current_line, line)
       if start_col >= 0 and start_col < #line_content then
         -- Highlight added text
         if start_col + #added <= #line_content then
-          log(string.format('Highlighting standalone addition at col %d-%d: '%s'',
+          log(string.format('Highlighting standalone addition at col %d-%d: ' % s '',
             start_col, start_col + #added, added))
           vim.api.nvim_buf_set_extmark(bufnr, ns_id, current_line - 1, start_col, {
             hl_group = 'DiffAdd',
@@ -627,7 +624,7 @@ function M.run_git_diff(target_branch, opts)
       if file == '%' then
         local current_file = vim.api.nvim_buf_get_name(current_buf)
         if current_file == '' then
-          vim.notify('Cannot diff an unnamed buffer with '%'', vim.log.levels.ERROR)
+          vim.notify('Cannot diff an unnamed buffer with ' % '', vim.log.levels.ERROR)
           return
         end
         table.insert(files, current_file)
