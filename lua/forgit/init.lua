@@ -2,6 +2,7 @@ local M = {}
 
 local utils = require('forgit.utils')
 local log = utils.log
+
 _FORGIT_CFG = {
   debug = false, -- set to true to enable debug logging
   log_path = nil, -- set to a path to log to a file
@@ -26,15 +27,7 @@ local create_cmd = function(cmd, func, opt)
   opt = vim.tbl_extend('force', { desc = 'forgit ' .. cmd }, opt or {})
   vim.api.nvim_create_user_command(cmd, func, opt)
 end
-local guihua_helper = utils.load_module('guihua.lua', 'guihua.helper')
-if not guihua_helper then
-  utils.warn('guihua not installed, please install ray-x/guihua.lua for GUI functions')
-  guihua_helper = {
-    is_installed = function()
-      return false
-    end,
-  }
-end
+local is_installed = vim.fn.executable
 
 local ga_bang = function(opts)
   local sh = vim.o.shell
@@ -105,10 +98,10 @@ M.setup = function(cfg)
   cfg = cfg or {}
   _FORGIT_CFG = vim.tbl_extend('force', _FORGIT_CFG, cfg)
 
-  if not guihua_helper.is_installed('fzf') then
+  if is_installed('fzf') ~= 1 then
     print('please install fzf e.g. `brew install fzf')
   end
-  if not guihua_helper.is_installed(_FORGIT_CFG.diff_pager) then
+  if is_installed(_FORGIT_CFG.diff_pager) ~= 1 then
     print(
       'please install '
         .. _FORGIT_CFG.diff_pager
@@ -117,7 +110,7 @@ M.setup = function(cfg)
         .. '`'
     )
   end
-  if not guihua_helper.is_installed('git') then
+  if is_installed('git') ~= 1 then
     print('please install git ')
   end
   if _FORGIT_CFG.fugitive then
@@ -127,9 +120,9 @@ M.setup = function(cfg)
     -- create_cmd(cmd, 'lua require("forgit").' .. cmd:lower() .. '()')
     local cmd = cmd_info[1]
     local cmd_details = cmd_info[2]
-    local forgit_subcmd = cmd_info[3]
-    local cmd_tbl = {}
     create_cmd(cmd, function(opts)
+      local cmd_tbl = {}
+      local forgit_subcmd = cmd_info[3]
       local cmdstr = string.lower(cmd)
       table.insert(cmd_tbl, _FORGIT_CFG.forgit_path)
       table.insert(cmd_tbl, forgit_subcmd)
@@ -166,7 +159,6 @@ M.setup = function(cfg)
         c = { 'bash', '-i', '-c', _FORGIT_CFG.forgit_path, forgit_subcmd }
       else
         c = cmd_tbl
-
       end
       term({ cmd = c, autoclose = autoclose, title = cmd_details })
     end, {
