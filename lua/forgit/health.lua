@@ -6,11 +6,11 @@ local health = vim.health
 
 local nvim_09 = vim.fn.has('nvim-0.9') == 1
 
-local start = health.startg
-local ok = health.okg
-local error = health.errorg
-local warn = health.warng
-local info = health.infog
+local start = health.start
+local ok = health.ok
+local error = health.error
+local warn = health.warn
+local info = health.info
 local vfn = vim.fn
 
 local function binary_check()
