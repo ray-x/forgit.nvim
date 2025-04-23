@@ -12,6 +12,7 @@ An elevator pitch:
 
 Highlights
  * fzf the files you changed in your PR
+ * use virtual inlay text to display git diff info and interactive navigation through a quickfix list
  * fzf branches and diff with diff tools of your choice
  * search git (ref)log with fzf
  * pretty git graph
@@ -43,25 +44,25 @@ You need
 
 https://user-images.githubusercontent.com/1681295/207864539-ec65b9c4-d8a0-4509-b13f-bd2192f742d9.mp4
 
-# install
+## install
 
 ```
 Plug 'ray-x/guihua.lua'  "lua GUI lib
 Plug 'ray-x/forgit.nvim'
 ```
 
-# Configure
+## Configure
 
 ```lua
 require'forgit'.setup({
   debug = false, -- enable debug logging default path is ~/.cache/nvim/forgit.log
   diff_pager = 'delta', -- you can use `diff`, `diff-so-fancy`
   diff_cmd = 'DiffviewOpen', -- you can use `DiffviewOpen`, `Gvdiffsplit` or `!git diff`, auto if not set
+  forgit = true, -- forgit installed?
   fugitive = false, -- git fugitive installed?
-  gitsigns = true,  -- integrate with gitsigns.nvim
-  flog = false,  -- integrate with gitsigns.nvim
+  gitsigns = true,  -- integrate command line
+  flog = false,  -- integrate commandline
   git_fuzzy = false, -- integrate with git-fuzzy
-  abbreviate = false, -- abvreviate some of the commands e.g. gps -> git push
   git_alias = true,  -- git command extensions see: Git command alias
   show_result = 'quickfix', -- show cmd result in quickfix or notify
 
@@ -73,14 +74,14 @@ require'forgit'.setup({
 })
 ```
 
-# Screenshot
+## Screenshot
 
 ![ga](https://user-images.githubusercontent.com/1681295/207861513-4a22c804-0e4c-46f5-92a1-f1d0c8d5e02a.jpg)
 
 ![gbd](https://user-images.githubusercontent.com/1681295/207861692-8c756b00-6e29-4e41-8fd4-dbf8b604fb7a.jpg)
 
 
-# usage
+## usage
 
 - [forgit](https://github.com/wfxr/forgit) commands supported by this plugin
 
@@ -126,7 +127,34 @@ require'forgit'.setup({
 |Gldo!   | Interactive `git log commit_hash & DiffviewOpen all diff files with diffview.nvim` generator |
 |Grlg    | Interactive `git rev-list & git grep` generator |
 
-### ⌨  Forgit Keybinds
+## Git Diff Visualization
+
+The `forgit.nvim` plugin provides seamless Git diff visualization directly within your Neovim buffer. The GitDiff command makes it easy to view and navigate changes without leaving your editor.
+
+### Compared to Other Vim/Neovim Plugins
+
+* Rendering Approach
+  It ustilize `--word-diff` option from git to get the fine-grained diff info
+  Uses Neovim's latest inlay extmark API for virtual lines and inline highlights
+  Shows deleted lines as virtual text rather than opening diff buffers
+  Maintains your editing context without split views
+
+* Interactive Navigation with quickfix
+
+### Usage
+The GitDiff command mimics Git's native diff functionality with added visual enhancements:
+
+|Command |	Description|
+| :-------------------: | ------------------------- |
+|:GitDiff | Show all uncommitted changes (equivalent to git diff) |
+|:GitDiff | %	Diff only the current file |
+|:GitDiff | HEAD	Compare all tracked files with latest commit |
+|:GitDiff | HEAD~3	Compare with commit 3 revisions back |
+|:GitDiff | main	Compare with the main branch |
+|:GitDiff | -- file1.lua file2.lua	Diff specific files |
+|:GitDiffClear | - Remove all diff highlights from the current buffer |
+
+## ⌨  Forgit Keybinds
 
 | Key                                           | Action                    |
 | :-------------------------------------------: | ------------------------- |
@@ -144,7 +172,7 @@ require'forgit'.setup({
 | <kbd>Alt</kbd> - <kbd>J</kbd> / <kbd>N</kbd>  | Preview move down         |
 
 
-### ⌨  Git command alias
+## ⌨  Git command alias
 
 
 | Command               | Action                    |

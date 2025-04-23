@@ -63,6 +63,8 @@ utils.log = function(...)
     local lineinfo = ''
 
     local info = debug.getinfo(2, 'Sl')
+    vim.schedule(function()
+
     lineinfo = info.short_src .. ':' .. info.currentline
     str = string.format('%s %s %s:', str, lineinfo, os.date('%H:%M:%S'))
     str = str .. ' dir: ' .. vim.fn.getcwd()
@@ -89,7 +91,8 @@ utils.log = function(...)
         print(str .. '\n')
       end
     end
-  end
+  end)
+end
 end
 
 return utils
