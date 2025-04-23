@@ -22,5 +22,7 @@ _G.test_rename = true
 _G.test_close = true
 require("plenary/busted")
 require("forgit").setup({
+debug = true,
+log_path = vim.fn.expand('$HOME') .. '/.cache/nvim/forgit.log',
 })
 EOF

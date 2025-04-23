@@ -180,6 +180,7 @@ function M.internal.render_deletions(bufnr, hunk_data)
     for i = #dels, 1, -1 do
       table.insert(vt_lines, 1, {{ dels[i].text, 'DiffDelete' }})
     end
+    render_count = render_count + 1
 
     log(vt_lines, target_line)
     vim.api.nvim_buf_set_extmark(bufnr, ns_id, target_line , 0, {
@@ -200,6 +201,8 @@ function M.internal.render_additions(bufnr, hunk_data)
   for pos, content in pairs(hunk_data.additions) do
     -- Only continue if the position is valid in the buffer
     if pos > buf_line_count then
+      log(string.format('Warning: Line %d is out of buffer range (1-%d)',
+        pos, buf_line_count))
       goto continue_add
     end
 
