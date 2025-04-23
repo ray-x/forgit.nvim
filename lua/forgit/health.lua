@@ -3,21 +3,22 @@ local M = {}
 local util = require('forgit.utils')
 
 local health = vim.health
-if not vim.health then
-  health = require('health')
-end
 
 local nvim_09 = vim.fn.has('nvim-0.9') == 1
 
-local start = nvim_09 and health.start or health.report_start
-local ok = nvim_09 and health.ok or health.report_ok
-local error = nvim_09 and health.error or health.report_error
-local warn = nvim_09 and health.warn or health.report_warn
-local info = nvim_09 and health.info or health.report_info
+local start = health.startg
+local ok = health.okg
+local error = health.errorg
+local warn = health.warng
+local info = health.infog
 local vfn = vim.fn
 
 local function binary_check()
-  health.report_start('Binaries')
+  if not nvim_09 then
+    error('min nvim version is 0.9')
+    return
+  end
+  health.start('Binaries')
   local no_err = true
   local git_bin = 'git'
   if vfn.executable(git_bin) == 1 then
@@ -68,7 +69,7 @@ local function binary_check()
     info('git fugitive installed')
   else
     no_err = false
-    warn('git fugitive is not installed')
+    warn('git fugitive is not installed/enabled')
   end
 
   if no_err then
