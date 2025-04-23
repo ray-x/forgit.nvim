@@ -24,7 +24,6 @@ _FORGIT_CFG = {
   cmds_list = {},
 }
 
-
 local function deprecate()
   if _FORGIT_CFG.diff == 'delta' then
     utils.warn(
@@ -35,9 +34,10 @@ end
 
 M.setup = function(cfg)
   cfg = cfg or {}
+  local is_installed = vim.fn.executable
   _FORGIT_CFG = vim.tbl_extend('force', _FORGIT_CFG, cfg)
 
-  if not guihua_helper.is_installed('fzf') then
+  if is_installed('fzf') ~= 1 then
     print('please install fzf e.g. `brew install fzf')
   end
   if is_installed(_FORGIT_CFG.diff_pager) ~= 1 then

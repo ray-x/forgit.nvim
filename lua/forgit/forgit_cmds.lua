@@ -64,14 +64,14 @@ local ga_bang = function(opts)
   term({ cmd = cmd, autoclose = true })
 end
 
-M.setup = function (opts)
+M.setup = function(opts)
   for _, cmd_info in ipairs(M.fcmds) do
     -- create_cmd(cmd, 'lua require("forgit").' .. cmd:lower() .. '()')
     local cmd = cmd_info[1]
     local cmd_details = cmd_info[2]
-    local forgit_subcmd = cmd_info[3]
-    local cmd_tbl = {}
     create_cmd(cmd, function(opts)
+      local cmd_tbl = {}
+      local forgit_subcmd = cmd_info[3]
       local cmdstr = string.lower(cmd)
       table.insert(cmd_tbl, _FORGIT_CFG.forgit_path)
       table.insert(cmd_tbl, forgit_subcmd)
@@ -108,7 +108,6 @@ M.setup = function (opts)
         c = { 'bash', '-i', '-c', _FORGIT_CFG.forgit_path, forgit_subcmd }
       else
         c = cmd_tbl
-
       end
       term({ cmd = c, autoclose = autoclose, title = cmd_details })
     end, {
