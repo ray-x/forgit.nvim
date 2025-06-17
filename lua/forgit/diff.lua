@@ -166,24 +166,24 @@ function M.internal.render_deletions(bufnr, hunk_data)
     local target_line = 0
     log(string.format('Rendering %d deletions for context %d', #dels, after_context))
     if after_context == 0 then
-      above = true  -- might be first line in the buffer
+      above = true -- might be first line in the buffer
     else
       if context[after_context] then
         target_line = context[after_context].new_linenr - 1
       else
-        target_line = hunk_data.new_start - 1 + hunk_data.new_count - 1   -- end of the hunk
+        target_line = hunk_data.new_start - 1 + hunk_data.new_count - 1 -- end of the hunk
       end
       above = false
     end
 
     -- Render each deletion in reverse order so the first appears at the top
     for i = #dels, 1, -1 do
-      table.insert(vt_lines, 1, {{ dels[i].text, 'DiffDelete' }})
+      table.insert(vt_lines, 1, { { dels[i].text, 'DiffDelete' } })
     end
     render_count = render_count + 1
 
     log(vt_lines, target_line)
-    vim.api.nvim_buf_set_extmark(bufnr, ns_id, target_line , 0, {
+    vim.api.nvim_buf_set_extmark(bufnr, ns_id, target_line, 0, {
       virt_lines = vt_lines,
       virt_lines_above = above,
     })
@@ -347,7 +347,6 @@ function M.internal.render_word_diffs(bufnr, hunk_data)
   return render_count
 end
 
-
 ---@param hunk table: {bufnr, user_data = {hunk, header, first_change_line, start_line}}
 function M.render_hunk(hunk)
   local bufnr = hunk.bufnr
@@ -436,7 +435,7 @@ function M.inline_diff_highlight(bufnr, current_line, line)
 
     -- Create a virtual line to show the deletion
     vim.api.nvim_buf_set_extmark(bufnr, ns_id, current_line - 1, 0, {
-      virt_lines = {{ { leading_ws, '' },  { deleted, 'DiffDelete' } } },
+      virt_lines = { { { leading_ws, '' }, { deleted, 'DiffDelete' } } },
       virt_lines_above = true, -- Default to above
     })
     return
@@ -510,32 +509,32 @@ function M.inline_diff_highlight(bufnr, current_line, line)
 
       -- Highlight added text with DiffChange
 
-        -- do a bit search to find the right position(as git diff targetting console display may have misalignment)
-        local buf_line = vim.api.nvim_buf_get_lines(bufnr, current_line - 1, current_line, false)[1] or ''
-        local added_pos = buf_line:find(added, expected_pos, true)
-        if not added_pos then
-          log('Warning: Unable to find added text in buffer line')
-          -- Fallback to the expected position
-          added_pos = expected_pos
-        else
-          -- Adjust the expected position based on the found position
-          expected_pos = added_pos - 1
-        end
+      -- do a bit search to find the right position(as git diff targetting console display may have misalignment)
+      local buf_line = vim.api.nvim_buf_get_lines(bufnr, current_line - 1, current_line, false)[1] or ''
+      local added_pos = buf_line:find(added, expected_pos, true)
+      if not added_pos then
+        log('Warning: Unable to find added text in buffer line')
+        -- Fallback to the expected position
+        added_pos = expected_pos
+      else
+        -- Adjust the expected position based on the found position
+        expected_pos = added_pos - 1
+      end
 
-        local end_col = math.max(added_pos + #added - 1, expected_pos + #added)
-        end_col = math.min(end_col, #line_content)
-        log(string.format('Highlighting changes at col %d-%d: %s',
-          expected_pos, expected_pos + #added, added))
-        -- Show deleted text as inline virtual text with DiffDelete
-        log(string.format('Placing deletion at col %d: %s', expected_pos, deleted))
-        vim.api.nvim_buf_set_extmark(bufnr, ns_id, current_line - 1, expected_pos, {
-          hl_group = 'DiffChange',
-          end_col = end_col,
-        })
-        vim.api.nvim_buf_set_extmark(bufnr, ns_id, current_line - 1, expected_pos, {
-          virt_text = { { deleted, 'DiffDelete' } },
-          virt_text_pos = 'inline',
-        })
+      local end_col = math.max(added_pos + #added - 1, expected_pos + #added)
+      end_col = math.min(end_col, #line_content)
+      log(string.format('Highlighting changes at col %d-%d: %s',
+        expected_pos, expected_pos + #added, added))
+      -- Show deleted text as inline virtual text with DiffDelete
+      log(string.format('Placing deletion at col %d: %s', expected_pos, deleted))
+      vim.api.nvim_buf_set_extmark(bufnr, ns_id, current_line - 1, expected_pos, {
+        hl_group = 'DiffChange',
+        end_col = end_col,
+      })
+      vim.api.nvim_buf_set_extmark(bufnr, ns_id, current_line - 1, expected_pos, {
+        virt_text = { { deleted, 'DiffDelete' } },
+        virt_text_pos = 'inline',
+      })
 
 
 
@@ -1008,6 +1007,10 @@ function M.setup()
     local out = {}
     for idx = info.start_idx, info.end_idx do
       local e = items[idx]
+      if not e or not e.user_data then
+        -- Skip invalid entries
+        goto continue
+      end
       local ud = e.user_data
 
       -- Make sure we have a valid filename
@@ -1028,7 +1031,9 @@ function M.setup()
       else
         table.insert(out, string.format('%s:%d │ %s', vim.fn.fnamemodify(filename, ':~:.'), e.lnum, e.text or ''))
       end
+      ::continue::
     end
+
 
     return out
   end
